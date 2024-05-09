@@ -1,0 +1,99 @@
+#!  /Skel/bin/perl
+
+# start recording a video file
+
+use Getopt::Std ;
+use Forks::Super ;
+use strict ; 
+
+my %OPTS ;
+getopts('p:i:h', \%OPTS) ; # prefix, id 
+&help if defined $OPTS{'h'} ; 
+
+# The user may specify a prefix name for the video file
+
+my $prefix ; 
+$prefix = $OPTS{'p'} if defined $OPTS{'p'} ; 
+$prefix = 'video' unless $prefix =~ /\w+/ ; 
+$prefix =~ s/\.$//g ; 
+$prefix .= '.' ; 
+
+# the filename is a combination of the prefix, the time, and the extension 
+
+my $isotime = `isotime` ; chomp $isotime ; 
+my $extension = '.mkv' ; 
+my $fn  = $prefix . $isotime . $extension ; 
+
+my $windowid ; 
+my $geometry ; 
+$windowid = $OPTS{'i'} if defined $OPTS{'i'} ; 
+
+# the user should specify a windowid, otherwise we assume the root window
+# here we get the geometry arguments to ffmpeg
+
+if (defined $windowid) { #
+	$geometry = `geombyid $windowid`  ; 
+	chomp $geometry ;
+} else {
+	$geometry = `geombyroot`  ; 
+	chomp $geometry ;
+}  
+
+# temporary until we have database hooks for this. 
+# We should run the fvwm-newfileentry, but set the 
+# path to the database with a script for specifically 
+# that purpose. Then we should read it back from the 
+# database. 
+
+my $cpd = $ENV{'HOME'} ; 
+$cpd =~ s/$\///g ; 
+$fn =~ s/^/$cpd\// ; # pathname becomes fully qualified 
+
+## confirm with user
+
+# open (UFN, "fvwm-newfileentry -p $fn |") ; 
+# $fn = readline(UFN) ; 
+# warn $fn ; 
+# chomp $fn  ; 
+# close(UFN) ; 
+# die ("no filename supplied") unless ($fn =~ /\w+/) ; 
+
+$fn = 'foo' ;  
+
+my $startsound = $ENV{'SOUNDPATH'} . '/CSOUNDS/C805.WAV' ; 
+my $soundpid = fork { exec => "play $startsound" } ; 
+
+sleep 1; 
+
+my $ev = 'VIDEOPID' ; # environment variable for PID storage 
+my $fv = 'VIDEOFN'  ; # environment variable for Video Filename
+
+# works
+warn $geometry ; 
+
+my $vidcommand = "/opt/bin/ffmpeg -f alsa -ac 2 -i pulse -f x11grab $geometry -r 32 -acodec pcm_s16le -vcodec libx264 -preset ultrafast -crf 0 -y $fn" ; 
+
+# doesn't work
+# my $vidcommand = "sox -t alsa hw:0,0 -t alsa hw:1,0 -m -p gain | ffmpeg -i -f x11grab $geometry -r 32 -vcodec libx264 -preset ultrafast -crf 0 -f sox -i - -acodec pcm_s16le -y $fn" ; 
+
+# -preset ultrafast -crf 0, this bit supercedes "lossless ultrafast" 
+
+print $vidcommand ; 
+
+my $videopid = fork { "exec" => "$vidcommand" } ; # get arecord PID
+
+warn $videopid  ; 
+warn $vidcommand ; 
+
+# debugging
+# my $xmessagepid = fork { "exec" => "xmessage $videopid" } ; # get arecord PID
+
+my $fn_pid = fork{ 'exec' => ("FvwmCommand \'SetEnv $fv $fn\'") } ; # stow filename in FVWM 
+exec("FvwmCommand \'SetEnv $ev $videopid\'")  ; # stow PID in FVWM 
+
+sub help {
+	print "-i windowid -p prefix\n\n" ; 
+	exit ; 
+}
+
+

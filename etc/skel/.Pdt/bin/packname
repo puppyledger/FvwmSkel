@@ -1,0 +1,18 @@
+#! /bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-50-25.EDT';
+
+# print the package contained in a file.
+
+my $fn = shift @ARGV;
+chomp $fn;
+open( FN, $fn ) || die("unable to open $fn");
+my $firstline = <FN>;
+close(FN);
+chomp $firstline;
+
+$firstline =~ s/\s*\;.*$//;
+$firstline =~ s/^\s*package\s*//;
+
+print $firstline ;

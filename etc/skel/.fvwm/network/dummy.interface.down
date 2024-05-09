@@ -1,0 +1,13 @@
+#! /bin/bash
+
+# drop all dummy interfaces
+
+ip link delete dummy0 
+ip link delete dummy1
+ip link delete dummy2
+ip link delete dummy3
+ip link delete dummy4
+ip link delete dummy5
+ip link delete dummy6
+ip link delete dummy7
+

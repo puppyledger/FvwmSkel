@@ -1,0 +1,8 @@
+#! /bin/bash
+
+# this is eval'd into our environment as an alias statement. 
+# it is what makes pdtbin and pdtlib work
+
+source $HOME/.pdtrc
+echo "cd $PDT_SCM_DIR"
+

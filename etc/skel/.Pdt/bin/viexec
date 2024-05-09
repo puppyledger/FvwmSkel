@@ -1,0 +1,202 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-57-07.EDT';
+
+use Cwd;
+use Getopt::Std;
+use Pdt::SourceEnv qw(:all);
+use strict;
+
+my $_DEBUG = 0;
+
+&sourceenv( $ENV{'PDT_PDTRC'} );    # make the environment current
+umask( $ENV{'PDT_UMASK'} ) if length( $ENV{'PDT_UMASK'} );
+
+my %OPTS;
+getopts( 'p:dguh', \%OPTS );
+
+my $command = $0;
+chomp $command;
+my $datestamp = `date +%F\.%H\-%M\-%S\.%Z`;
+chomp $datestamp;
+
+### INIT (initialization commands are just passed on to setpdtrc)
+
+my $initcommand;
+$initcommand .= " -p $OPTS{'p'}" if length( $OPTS{'p'} );
+$initcommand .= " -d"            if defined $OPTS{'d'};
+$initcommand .= " -g"            if defined $OPTS{'g'};
+$initcommand = "setpdtrc " . $initcommand if length($initcommand);
+system($initcommand) if length($initcommand);
+
+### INPUT
+
+my $fn;          # the filename we wish to edit
+my $zoomline;    # the line to zoom to (optional)
+
+# here we assume that the project executable will be
+# the lowercase of the project name with a .pl extension
+# if the user does not otherwise specify
+
+unless ( scalar(@ARGV) ) {
+   $fn = $ENV{'PDT_ACTIVE'};
+   $fn =~ tr/A-Z/a-z/;
+}
+
+$fn = shift @ARGV if ( scalar(@ARGV) );
+chomp $fn;
+$zoomline = shift @ARGV if ( scalar(@ARGV) );
+chomp $zoomline;
+
+# we may get the path unqualified or fully qualified, in
+# any case we already know where it is so we strip leading
+# directories if any and rebuild the project path. Then create
+# the related autobackup and error filenames.
+
+$fn =~ s/^.*\///g;
+
+my $efn = $fn . '.' . "ERR";         # error filename produced by pertidy
+my $bfn = $fn . '.' . $datestamp;    # backup filename produced by perltidy
+
+$fn  = "$ENV{'PDT_BIN_PATH'}/$fn";   # fully qualified filename
+$efn = "$ENV{'PDT_BIN_PATH'}/$efn";  # fully qualified error filename
+$bfn = "$ENV{'PDT_BIN_PATH'}/$bfn";  # fully qualified automatic backup
+
+### DEPENDENT DIRECTORIES
+
+my $fd = $fn;
+my @dirtok = split( /\//, $fd );
+pop @dirtok;
+$fd = join '/', @dirtok;
+
+unless ( -d $fd ) {
+   print "Dependent directory $fd does not exist. Create [Y/n]";
+   my $i = <STDIN>;
+   die("exiting.") if $i =~ /n/i;
+   warn "mkdir -p $fd" if $_DEBUG;
+   system("mkdir -p $fd");
+   die("unable to mkdir") unless ( -d $fd );
+}
+
+# Create the file if needs be
+
+unless ( -e $fn ) {
+   print "$fn does not exist, create? [Y/n]";
+   my $yn = <STDIN>;
+   die("aborting.") if $yn =~ /n/i;
+   open( FN, ">$fn" ) || die("unable to create file");
+   my $terp = $ENV{'PDT_PERL'};
+   $terp =~ s/\/$//g;
+   $terp = '#! ' . $ENV{'PDT_PERL'} . "\n\n";
+   print FN $terp;
+   close(FN);
+   system("versioninplace $fn");
+}
+
+system("oncd $fn") if $ENV{'PDT_USEONCD'};    # set the window title
+
+### EDIT
+
+my $ecmd = $ENV{'PDT_EDITOR'} . " " . $fn . " " . $zoomline;
+
+# warn $ecmd ;
+system("$ecmd");
+
+### TIDY
+
+# get the intrpeter line
+
+open( FN, $fn );
+my $terpline = readline(FN) || die( "$fn", '... file not found.' );
+close(FN);
+chomp $terpline;
+$terpline =~ s/^\#\!\s*//;
+
+if ( $terpline =~ /perl|package/ ) {    # do tidy perl
+
+   my $ptstring = 'perltidy -b -bext=' . $datestamp . ' -ole=unix -sil=0 -isbc -i=3 -syn -ce -l=160 -sbt=0 ' . $fn;
+   warn $ptstring if $_DEBUG;
+   sleep 2 if $_DEBUG;
+   system($ptstring);
+   system("subtidy $fn");
+
+} elsif ( $terpline =~ /python/ ) {    # just copy python. (it doesn't work unless its tidy already.)  
+
+	system("cp $fn $bfn") ; 
+
+} else {                                # don't tidy bash
+
+   warn "Not perl or python, do not tidy.";
+
+}
+
+## HIDE AUTOMATIC BACKUP
+
+# warn $bfn ;
+
+system("hideinplace $bfn");
+
+### AUTOUPDATE VERSION
+
+# warn $fn ;
+
+system("versioninplace $fn");
+
+# groupership
+
+my $chgrpstring = "chgrp $ENV{'PDT_GROUP'} $fn";
+system($chgrpstring);
+
+# if we wrote an error file, we sign it, and then print it.
+
+if ( -e $efn ) {
+   open( LEF, ">>$efn" ) || exit;
+   print LEF "\nLAST USER TO EDIT THIS FILE:  $ENV{'USER'}\n";
+   close(LEF);
+   open( LEF, "$efn" ) || exit;
+
+   my $zoomerror;    # the first error line number
+   my $zoomtext;     #
+   my $zef;          # flag indicating it has been set
+
+   while (<LEF>) {
+      unless ($zef) {
+         if ( $_ =~ /^\d+:\s+/ ) {
+            $zoomerror = $_;
+            chomp $zoomerror;
+            $zoomerror =~ s/\:.*//g;
+            $zef = 1;
+         }
+      }
+
+      print $_ ;
+   }
+
+   print "\nRETURN TO LINE $zoomerror? (y/n)";
+   my $yn = <STDIN>;
+
+   exit unless $yn =~ /y/i;
+
+   my $editcommand = "$command $fn \+$zoomerror";
+
+   # warn $editcommand ;
+   # sleep 4 ;
+
+   exec("$editcommand");
+
+} else {
+
+   # SCM stuff goes here
+
+   if ( defined( $OPTS{'u'} ) ) {    # git add
+      system("setpdtrc -u");
+   }
+
+   exit;
+}
+
+sub dohelp {
+   print "not yet implemented.\n";
+}
+

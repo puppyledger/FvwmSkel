@@ -1,0 +1,29 @@
+
+# This list is used for generating the TryFont and SetFont menus. 
+# Note that this is just a small sample derived from running xlsfonts. 
+# You can adjust this list by running xlsfonts and copying the 
+# fonts you like from that list into this file for system wide 
+# access. Or you can create your own list by listing your 
+# preferred fonts in:  $HOME/.xuserfonts/Urxvt.UserFont.txt
+# which will be sorted into this list. 
+
+10x20
+5x7
+5x8
+6x10
+6x12
+6x13
+6x13
+6x13bold
+6x9
+7x13
+7x13bold
+7x13euro
+7x13eurobold
+7x14
+7x14bold
+8x13
+8x13bold
+9x15
+9x15bold
+

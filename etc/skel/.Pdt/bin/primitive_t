@@ -1,0 +1,23 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-52-50.EDT'
+
+# NOTE: environment variables must be declared by a cbenv()  
+# function in the template, in order to be collated. 
+
+export example_template_variable='<TMPL_VAR NAME=example_question>' 
+
+#:
+#: usage:P t
+#:
+#:       API self registering template class 
+#:       everything below the __DATA__ line is 
+#:       templateable plain text. 
+#:
+#:       so:   Foo.pm        API root class       
+#:             Foo/Bar.pm    API object class
+#:             Foo/BigStaticText.pm   API template class 
+#: 
+
+pdt 'Pdt::Primitive_T'

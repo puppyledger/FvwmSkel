@@ -1,0 +1,19 @@
+#! /bin/bash 
+
+#:
+#: usage:P o
+#:
+#:       API object class, providing a self registering 
+#: 		autolithic object constructor. May be modified 
+#: 		to a plurolithic object constructor by comment. 
+#: 
+#:       so:   Foo.pm        API root class    
+#:             Foo/Bar.pm    API object class
+#: 
+
+echo "PRIMITIVE O"
+echo $RTFN
+echo $LASTEDITFILE
+sleep 1
+
+pdt 'Pdt::Primitive_O'

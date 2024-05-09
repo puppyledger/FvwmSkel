@@ -1,0 +1,9 @@
+#! /bin/bash
+
+# if there is a an audio recording process started from 
+# an fvwm menu, this kills it. 
+
+kill `fvwm-getenv AUDIOPID`
+FvwmCommand 'SetEnv AUDIOPID \"\"'
+aplay $SOUND_STOPRECORD & 
+

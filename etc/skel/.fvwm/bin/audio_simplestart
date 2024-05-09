@@ -1,0 +1,44 @@
+#! /usr/bin/env skelperl
+
+# start recording a wav file to the current 
+# project directory 
+
+use Forks::Super ;
+use strict ; 
+
+my $prefix = shift @ARGV ; 
+chomp $prefix ; 
+$prefix = "audio" unless $prefix =~ /\w+/ ; 
+
+# get our basic filename
+open (ISOFN,"isotimefn $prefix wav |") ; 
+my $fn = readline(ISOFN)  ; 
+chomp $fn ; 
+close(ISOFN) ; 
+
+# figure out our current project directory
+open(CPD, "$ENV{'SKELPATH'}/local/bin/fvwm-getenv CPD |") ; 
+my $cpd = readline(CPD) ; 
+chomp $cpd ; 
+$cpd = $ENV{'HOME'} unless $cpd =~ /\w+/ ; 
+close CPD ; 
+
+$fn =~ s/^/$cpd\// ; # filename becomes fully qualified 
+
+# confirm with user
+open (UFN, "fvwm-newfileentry -p $fn |") ; 
+$fn = readline(UFN) ; 
+chomp $fn  ; 
+close(UFN) ; 
+die ("no filename supplied") unless ($fn =~ /\w+/) ; 
+
+my $startsound = $ENV{'SOUND_STARTRECORD'} ; 
+my $soundpid = fork { exec => "play $startsound" } ; 
+
+my $ev = 'AUDIOPID' ; # environment variable for PID storage 
+my $audiopid = fork { "exec" => "arecord $fn" } ; # get arecord PID
+
+# debugging
+# my $xmessagepid = fork { "exec" => "xmessage $audiopid" } ; # get arecord PID
+
+exec("FvwmCommand \'SetEnv $ev $audiopid\'")  ; # stow PID in FVWM 

@@ -1,0 +1,6 @@
+#! /bin/bash 
+
+export VERSION='2018-04-10.04-46-14.EDT'
+
+grep '#:' $PDT_BIN/primitive_? | pexp 's/^.*\:\#\:\s{1}//' | pexp 's/\t/   /g'
+

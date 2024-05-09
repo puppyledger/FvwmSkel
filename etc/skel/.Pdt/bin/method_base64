@@ -1,0 +1,120 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-46-32.EDT';
+
+#: take a list of filenames, base64 encode them and dump them into
+#: functions that decode the integral data when called. This method
+#: may be prefered to templates when portability to systems that
+#: don't use Pdt is required (such as when installing Pdt) and in
+#: some cases where encoded data is only loaded once and requires
+#: little to no interpolation, such as when configuring new empty
+#: databases.
+
+use MIME::Base64;
+use Pdt::SourceEnv qw(:all);    # environment handling tools
+use Pdt::Bonk qw(:all);         # timered errors for inline erroring in vim
+
+# $::_BONK = 1;    # turn on/off bonks
+
+use strict;
+
+unless ( length( $ENV{'RTFN'} ) ) {
+   Bonk "no RTFN environment variable defined";
+   exit;
+}
+
+bonk "starting";
+
+### CLI (arguments are filenames)
+
+my @M = @ARGV;
+chomp( $M[ $#M ] ) if scalar(@M);
+
+bonk "CLI elements: ", scalar(@M);
+
+# THE TEMPLATE
+
+my $T = Pdt::Method_Base64->new();
+
+bonk "template constructed.";
+
+# THE REPORT
+
+my $R;
+
+my $efo = 0;    # error file open
+open( RTFN, ">$ENV{'RTFN'}" ) || $efo++;
+
+if ($efo) {
+   bonk $@ ;
+   Bonk "Unable to open $ENV{'RTFN'} for writing.";
+   sleep 3;
+}
+
+bonk "$ENV{'RTFN'} OPEN for writing.";
+print RTFN "\n\n", '# use MIME::Base64;', '# (M: base64 [<filename1>...]])', "\n\n";
+
+foreach my $fn (@M) {
+   $fn = bashexpand($fn);    # Pdt::SourceEnv ;
+   Bonk "encoding $fn";
+   my $fc = doencodefile($fn);
+   bonk "$fn not found" unless defined $fc;
+   next unless defined $fc;
+   my ( $estart, $eend ) = fn2sub($fn);
+   print RTFN $estart, $fc, $eend;
+}
+
+Bonk "write complete";
+
+close(RTFN);
+
+# HERE sn is not having its file extension truncated
+
+sub fn2sub { # filename to subroutine
+   my $fn = shift;    # file name
+   my $sn = $fn;      # sub name
+   my $hn;            # here document name
+
+   $sn =~ s/^.*\///g; # last token in path
+   $fn = $sn;         #
+   $sn =~ s/^\.//;    # if hidden, unhide
+   $sn =~ s/\..*$//;  # if file extensions, take the first token.
+   $hn = $sn;             # here document name
+   $sn =~ tr/A-Z/a-z/;    # subname is lc
+   $hn =~ tr/a-z/A-Z/;    # herename is uc
+
+   my $estart = "sub $sn \{ \# " . $fn . "\n\n";
+   $estart .= 'my $encoded = <<' . "\"$hn\"\;" . "\n";
+
+   my $eend = "$hn\n\n";
+   $eend .= 'return decode_base64($encoded);' . "\n";
+   $eend .= "\}\n";
+
+   return ( $estart, $eend );
+}
+
+sub doencodefile { # 
+   my $fn = shift;
+
+   my $fc;
+
+   my $buf;
+   my $efo = 0;
+
+   open( FILE, "$fn" ) || $efo++;
+
+   if ($efo) {
+      bonk "$fn not readable.";
+      return undef;
+   }
+
+   bonk "encoding file";
+
+   while ( read( FILE, $buf, 60 * 57 ) ) {
+      $fc .= encode_base64($buf);
+   }
+
+   bonk "file encoded length: ", length($fc);
+
+   return $fc;
+}

@@ -1,0 +1,45 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-55-29.EDT';
+
+#: extract a requested method from a class
+
+use Getopt::Std;    # CLI options
+
+my %OPTS;
+getopts( 'm:f:i', \%OPTS );
+my $method = $OPTS{'m'};
+my $fn     = $OPTS{'f'};
+chomp $method;
+chomp $fn;
+
+die('usage viewmethod -f <filename> -m <methodname> -i interioronly') unless $fn =~ /\w+/;
+die('usage viewmethod -f <filename> -m <methodname> -i interioronly') unless $method =~ /\w+/;
+
+open( FN, "$fn" ) || die("unable to open $fn");
+
+my $inmethod  = 0;
+my $isbracket = 0;
+
+while (<FN>) {
+   if ( $_ =~ /^sub\s+$method\s*\{/ ) {
+      $inmethod  = 1;
+      $isbracket = 1;
+
+   }
+   if ( $_ =~ /^\}/ && $inmethod ) {
+      $isbracket = 1;
+   }
+
+   if ( $inmethod && $isbracket ) { print $_ unless $OPTS{'i'}; }
+   elsif ($inmethod) { print $_ ; }
+
+   if ( $_ =~ /^\}/ && $inmethod ) {
+      $inmethod = 0;
+   }
+
+   $isbracket = 0;
+}
+
+close(FN);
+

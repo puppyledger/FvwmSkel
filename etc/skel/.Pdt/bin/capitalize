@@ -1,0 +1,23 @@
+#! /bin/perl 
+
+my $VERSION = '2018-04-10.04-38-45.EDT';
+
+#: capitalize a strings autodetects arg0 or pipeline
+
+if ( scalar(@ARGV) ) {    # capitalize one argument on the CLI
+   my $v = shift @ARGV;
+   chomp $v;
+   @v = split( //, $v );
+   $v[ 0 ] =~ tr/a-z/A-Z/;
+   $v = join "", @v;
+   print $v ;
+} else {                  # Capitalize everything on STDIN
+   while (<STDIN>) {
+      my $v = $_;
+      @v = split( //, $v );
+      $v[ 0 ] =~ tr/a-z/A-Z/;
+      $v = join "", @v;
+      print $v ;
+   }
+}
+

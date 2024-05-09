@@ -1,0 +1,48 @@
+#! /Skel/bin/perl
+
+# INCOMPLETE 
+# 
+# fvwm-rununtil: 
+#
+# program takes a command to execute on the CLI. It runs that command and gets back 
+# the pid, and then starts the userinterface iconified. When a deiconify event is 
+# detected, it kills the respective pid. Useful for daemons like VPN clients and 
+# the like, for temporary connections.  
+#
+# -m <Message>
+# -c <command>  
+# -g <geometry> see: http://www.fvwm.org/doc/unstable/commands/Move.html
+#
+
+use Class::Paths ; 
+use Getopt::Std ;
+use Tk ; 
+
+my %OPTS ;
+getopts('m:c:g:', \%OPTS) ; # path ,x string request. 
+
+my $onceflag = 1 ; 
+
+# Default input strings   
+$OPTS{'m'} = "x" unless defined $OPTS{'m'} ; 
+$OPTS{'g'} = '+0+0' unless defined $OPTS{'g'} ; 
+die "whats the point?" unless defined $OPTS{'c'} ; 
+
+# Construct GUI
+my $MW = MainWindow->new() ; # Tk MW 
+
+my $WindowID = $MW->wrapper->[0] ; 
+my $B1 = $MW->Button(-textvariable => \$OPTS{'m'}, -command => sub { exec($OPTS{'c'}); })->pack(); 
+
+&moveto if $onceflag ; 
+$onceflag = 0 if $onceflag ; 
+
+MainLoop;
+
+sub moveto {
+	# Move window so bottom right is at bottom
+	# right of screen
+	my $moveblock = 'FvwmCommand \'WindowID ' . $WindowID . ' Move ' .  $OPTS{'g'} . "\'" ;
+	system($moveblock) ; 
+}
+

@@ -1,0 +1,13 @@
+### Window Decoration Styles
+
+# Thin window borders
+Style	* BorderWidth 2, HandleWidth 2
+
+# Derived Windows always have decorations
+Style   * DecorateTransient 
+
+# Window titles are always left justified
+TitleStyle	LeftJustified
+
+# This gives us the grooved tilebar effect
+Style * StippledTitle

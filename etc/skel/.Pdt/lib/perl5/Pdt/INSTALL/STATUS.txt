@@ -1,0 +1,2 @@
+These are some basic frameworks that are to be used by a 
+fancy installer in the future. They are not yet implemented. 

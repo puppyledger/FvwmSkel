@@ -1,0 +1,8 @@
+#! /bin/bash 
+
+# \#
+export VERSION='2018-04-10.04-50-32.EDT'
+
+
+cat $1 | par 
+

@@ -1,0 +1,20 @@
+#! /bin/bash 
+
+# \#
+export VERSION='2018-04-10.04-53-30.EDT'
+
+#:
+#: usage:P x
+#:
+#:       API exporter package 
+#: 		A simple header using perls built in EXPORTER 
+#: 		system. Use this for functions that are portable 
+#: 		but that don't necessariliy need to use inheritance 
+#: 
+#:       so:   Foo.pm        		API root class       
+#:             Foo/Bar.pm    		API object class
+#:             Foo/Baz.pm    		API object class
+#:					Foo/CommonFunc.pm API exporter package
+#:
+
+pdt 'Pdt::Primitive_X'

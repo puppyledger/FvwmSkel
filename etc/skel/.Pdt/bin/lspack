@@ -1,0 +1,80 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-45-28.EDT';
+
+#: lslib: list all the libraries in the current project directory
+
+use Pdt::SourceEnv qw(sourceenv);
+use Sort::Naturally qw(nsort);
+
+local $SIG{__WARN__} = sub { };
+
+use strict;
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+#print "$ENV{'PDT_LIB_PATH'}\n" ; # path to the current project libraries
+#print "$ENV{'PDT_BIN'}\n" ; # path to the installed location of the pdt scripts
+
+my $prefix = shift @ARGV;
+chomp $prefix;
+
+open( FLIST, "/usr/bin/find -L $ENV{'PDT_LIB_PATH'} |" );
+
+### get the initial file list
+
+my @F;    #
+
+while (<FLIST>) {    # by file name
+   my $fn = $_;
+
+   chomp $fn;
+   my @fntok = split( '/', $fn );
+   my $lasttok = "$fntok[ $#fntok ]";
+   next if ( $lasttok =~ /^\./ );
+   next unless ( $lasttok =~ /\.pm$/i );
+
+   push @F, $fn;
+
+}
+
+close(FLIST);
+
+# print "Total Project Files: ", scalar(@F), "\n";
+
+#### extract all the package strings
+
+my @C;    # classes
+
+foreach my $fn (@F) {
+   open( FOO, "$ENV{'PDT_BIN'}/seepack $fn |" );
+   while (<FOO>) {
+      my $foo = $_;
+      chomp $foo;
+      if ( $foo =~ /use/ ) {
+         push @C, $foo;
+      }
+
+   }
+   close(FOO);
+}
+
+### prune based on prefix if one
+
+if ( length($prefix) ) {
+   for ( my $n = 0 ; $n < scalar(@C) ; $n++ ) {
+      my $matchable = $C[ $n ];
+      $matchable =~ s/^use\s+//;
+      unless ( $matchable =~ /^$prefix/ ) {
+         splice( @C, $n, 1 );
+         $n--;
+      }
+   }
+}
+
+### indent based on clss depth
+
+@C = nsort(@C);
+my $text = join "\n", @C;
+print "\n", $text, "\n";
+

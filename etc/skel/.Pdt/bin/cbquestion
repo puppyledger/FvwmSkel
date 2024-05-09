@@ -1,0 +1,100 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-41-33.EDT';
+
+#: cbquestion produces a callback map for any methods that are name
+#: duplicate of fields within the template.
+
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use Pdt::Bonk;
+use strict;
+
+# $::_BONK = 1 ;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+# local $SIG{__WARN__} = sub {};
+
+# the name of the executable is used in the template
+
+my $doc    = Pdt::Cbmap->new();    # the template handle
+my @Eclass = env2class();          # get the list of classes to process Pdt::SourceEnv
+my $OUTFH  = rtfnorstdout();       # get a writable filehandle Pdt::Sourceenv
+my $tclass = $Eclass[ 0 ];         # the template we are editing
+
+my $T;                             # The template
+my @f;                             # the fields
+my %F;                             # the match table
+my %COLLISION;                     # prune any duplicates
+my $mapname = 'cbquestion';
+my @mapstatement;
+
+# print $OUTFH $tclass ;
+
+my $tblock = 'use ' . $tclass . '; ' . '$T = ' . $tclass . '->new(); @f = $T->fields();';    #
+eval($tblock);
+Bonk $@ if $@;
+exit if ($@);
+
+unless ( scalar(@f) ) {
+   warn "No template fields yet defined.";
+   sleep 3;
+   exit;
+}
+
+foreach (@f) {                                                                               # convert the fields table into a truth table
+   $F{$_} = 1;
+}
+
+my $n = 0;
+
+my $fn = seefn($tclass);                                                                     # get the filename for the class
+bonk "filename for template class: $fn";
+
+my @mlist = seemethod($fn);                                                                  # read thefile and get all the methods.
+bonk "methods currently present in the class: ", ( join ',', @mlist );
+
+foreach (@mlist) {
+   next if $_ =~ /^new/;                                                                     # ignore constructors
+   next if $_ =~ /^cb/;                                                                      # specific to the CB class. cb's are API exports.
+   next if $_ =~ /^callback/;                                                                # same as above
+   next if $_ =~ /^do/;                                                                      # do's are local
+   next if $_ =~ /^_/;                                                                       # _'s are private
+   next unless $F{$_};                                                                       # we only process methods that match present fields
+   chomp;
+
+   my $checkvalue = $_;                                                                      # make a copy for collision checking.
+
+   my $foo = '$self->{\'' . $mapname . '\'}->{\'' . $_ . '\'} = sub { shift ; return $self->' . $_ . '(@_) ; }' . ';';
+
+   if ($n) {                                                                                 # included the imported class in the comment if imported.
+      $foo = $foo . ' #' . "\t" . $tclass;
+   }
+
+   # flag to avoid duplicates.
+
+   push( @mapstatement, $foo ) unless $COLLISION{$checkvalue};
+   $COLLISION{$checkvalue} = 1;
+
+}
+
+@mapstatement = nsort(@mapstatement);
+my $bar = join "\n\t", @mapstatement;
+
+$doc->append(
+   'execname'     => 'cbquestion',
+   'mapname'      => $mapname,
+   'mapstatement' => $bar
+);
+
+print $OUTFH $doc->output();
+print $OUTFH "\n";
+

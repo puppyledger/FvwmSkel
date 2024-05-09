@@ -1,0 +1,5 @@
+#! /bin/bash 
+
+GEOM=`xwininfo -root | grep '\-geometry' | pexp 's/^.*geometry\s+//'`
+echo "-s $GEOM -i :0.0 "
+

@@ -1,0 +1,20 @@
+#! /bin/bash
+
+export XOFFICEPATH=/Skel/bin/libreoffice5.3/program
+export VIPYPUBPATH=/Skel/bin/libreoffice5.3/share/Scripts/python
+export VIPYBACKUP=\.$1\.`isotime`
+
+clear
+echo "BACKING UP: $1 --> $VIPYBACKUP"
+cp $1 $VIPYBACKUP 
+
+echo "RUNNING"
+$XOFFICEPATH/python $1 &> ~/.pythonerror
+fvwm-fkeybind -s -c PythonErrorOn.localhost.sh -f F8
+cat ~/.pythonerror
+echo "BREAK?" 
+
+sleep 1  
+
+echo "PUBLISHING" 
+cp $1 $VIPYPUBPATH

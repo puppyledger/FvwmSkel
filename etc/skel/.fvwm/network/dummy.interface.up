@@ -1,0 +1,57 @@
+#! /bin/bash
+
+# drop/add dummy interfaces (useful for testing)
+
+ip link delete dummy0 
+ip link add dummy0 type dummy 
+
+ip link delete dummy1
+ip link add dummy1 type dummy
+
+ip link delete dummy2
+ip link add dummy2 type dummy
+
+ip link delete dummy3
+ip link add dummy3 type dummy
+
+ip link delete dummy4
+ip link add dummy4 type dummy
+
+ip link delete dummy5
+ip link add dummy5 type dummy
+
+ip link delete dummy6
+ip link add dummy6 type dummy
+
+ip link delete dummy7
+ip link add dummy7 type dummy
+
+# number interfaces
+
+# site 1 
+
+ip addr add 172.16.1.8/32 dev dummy0 
+ip addr add 127.101.0.8/32 dev dummy1 
+ip addr add 127.201.0.8/32 dev dummy2 
+
+# site 2 
+
+ip addr add 172.16.2.8/32 dev dummy3 
+ip addr add 127.102.0.8/32 dev dummy4 
+ip addr add 127.202.0.8/32 dev dummy5 
+
+# # INTERNAL DNS (bind DNS to DNS/TLS) 
+
+ip addr add 127.127.127.127/32 dev dummy6
+ip addr add 127.254.254.2/32 dev dummy7
+
+# turn up interfaces
+
+ip link set dummy0 up
+ip link set dummy1 up
+ip link set dummy2 up
+ip link set dummy3 up
+ip link set dummy4 up
+ip link set dummy5 up
+ip link set dummy6 up
+ip link set dummy7 up

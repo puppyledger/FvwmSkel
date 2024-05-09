@@ -1,0 +1,7 @@
+#! /bin/bash
+
+# A LOT of our .rc files require perl lib paths. We make a unique RC so they 
+# have less interdependencies. 
+
+export PERL5LIB=$HOME/.fvwm/lib/perl5:$HOME/.Pdt/lib/perl5
+

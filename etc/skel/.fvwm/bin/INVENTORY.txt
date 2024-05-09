@@ -1,0 +1,95 @@
+### Fvwm Tools
+
+FvwmCommand		# the windows managers internal pipelining tool. 
+fvwm-alarm		# simple alarm dialog (like xmessage) 
+fvwm-entry		# simple text entry tool. 
+
+# note these are dependent on /Skel/tmp with permissions  drwxrwxrwt  
+
+fvwm-setenv		# set an environment variable in Fvwm 
+fvwm-getenv		# get an environment variable in Fvwm 
+fvwm-viewenv		# view the current state of an environment variable in Fvwm
+fvwm-incrementenv	# test the fvwm-get|set environment by imcrementing a counter
+fvwm-xsetenv		# set an environment variables with a a little GUI
+
+### Menu Generators 
+
+fvwm-execmenu 		# generate a menu pointing at executable scripts
+fvwm-selectmenu 	# generate a menu with an executable pointing at files
+fvwm-alert		# solicit a Y/N from the user. 
+
+### FvwmCommand Key Macros
+
+vicomment		# keyboard macro example, bound to F12. Inserts comments in vi 
+viuncomment		# keyboard macro example, bound to Alt-F12. Removes comments in vi 
+fvwm-fkeybind		# simple program for binding program execution to an fkey (non persistent. for persistent see ../fvwm/KeyBind.fvwm) 
+
+### Scripting Tools 
+
+fvwm-titlebyid 		# get the window title by Xwindow id. 
+fvwm-rootwindowwidth 	# get the root windows width  
+fvwm-rootwindowheight 	# get the root windows height 
+pexp			# perl version of sed
+doeach			# take a list of commands on STDIN and run them. Equivolent to "| bash" except it can be edited and modified for conditionals. 
+chstring		# change strings in a file. Similar to sed but uses perls regexps
+rtfn			# random temp file name generator. respects $PERL_TMP 
+isodate			# a file-name tolerant date format based on ISO 8601  
+isotime			# a file-name tolerant time format  based on ISO 8601 
+
+### Network Tools
+firstether		# get the first ethernet interface name. 
+
+### Terminal and CLI Tools		
+
+oncd			# generate escapes to set terminal titles. This is bound in .bashrc
+lessw			# less `which $1`
+catw			# cat `which $1`
+viw			# vi `which $1`
+
+### Sysadmin tools
+
+qb	quickbackup.  
+
+### INCOMPLETE
+
+# these are all deprecated by Vtp ( video tools in perl ) 
+
+audio_simplestart
+audio_simplestop
+fvwm-backupmenu
+video_simpleplay
+video_simplestart
+video_simplestop
+fvwm-rununtil
+
+# a lot of this will be redundant once the VI configs from CAGIX are 
+# brought over
+
+fvwm-idbytitle
+fvwm-interfacemenu
+fvwm-newfileentry
+fvwm-oldfileentry
+fvwm-pass
+fvwm-passenv
+fvwm-playlist
+fvwm-quickcycle
+
+fvwm-setcpd
+
+fvwm-template
+fvwm-termminus
+fvwm-termplus
+fvwm-titlebyid
+fvwm-transientbytitle
+
+geombyid
+geombyroot
+homestation
+hostonly
+instmodsh
+
+
+qb2iso
+video_camstream
+video_lv2
+

@@ -1,0 +1,14 @@
+#! /bin/bash 
+
+#:
+#: usage:P g
+#:
+#:       API object class, provides two step constructor 
+#: 		calls to import an API into a property. 
+#: 
+#:       so:   Foo.pm        API root class    
+#:             Foo/Bar.pm    API object class
+#: 
+
+
+pdt 'Pdt::Primitive_G'

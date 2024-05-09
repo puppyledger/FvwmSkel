@@ -1,0 +1,14 @@
+#! /Skel/bin/perl
+
+# strip crlf from dos files. (AAAARGH!) 
+
+while(<STDIN>) {
+        print crlf($_) . "\n" ; 
+}
+
+sub crlf {
+        my $line = shift ; 
+        $line =~ s/[\015\012]//g ; # strip CRLF 
+        return $line ; 
+}
+

@@ -1,0 +1,42 @@
+
+# cxvt is a symbolic link to rxvt. With the differing 
+# name we can assign different window styles. In this case 
+# cxvt always pops up centered. This is intended to be 
+# used for special notices, and warnings etc.  
+
+Style cxvt PositionPlacement Center
+
+# trterm is a symbolic link to aterm, which can do 
+# transparency.  We give it the same bindings as 
+# the root window, so that it can be called up and 
+# give the appearance of floating data. This is 
+# really the only thing that transparency is good 
+# for. 
+
+Style trterm !Title
+Style trterm !Borders
+Style trterm !Handles
+Style trterm Sticky
+Style trterm WindowListSkip
+Style trterm StaysOnBottom
+
+# Old school serial line terminals never 
+# scale properly. We create a symbolic link, 
+# and restrict a terminal program to it's startup 
+# size (80x24) so that minicom will work properly  
+# as a console. 
+
+Style consoleterm FixedSize
+
+# film banner is a popup splash screen that is used 
+# for recording videos. We remove decorations and 
+# make it the top window to give the appearance 
+# of a mini commercial. 
+
+Style filmbanner !Title
+Style filmbanner Sticky
+Style filmbanner WindowListSkip
+Style filmbanner StaysOnTop
+
+Style XMMS* StartIconic
+

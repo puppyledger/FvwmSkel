@@ -1,0 +1,10 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-40-04.EDT'
+
+
+# we are being called from within vim, no switches are required
+
+pdt Pdt::Cbenv ;  
+

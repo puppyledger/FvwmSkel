@@ -1,0 +1,182 @@
+#! /usr/bin/perl
+
+#: versioninplace: insert a copyright and
+#: date formatted copyright statement at
+#: the beginning of a file.
+#:
+#: usage: versionmodinplace <filename>
+
+use Bash::Sugar ;
+use Pdt::Fext qw(:all);
+
+use strict;
+
+# get the current env variables for the copyright owner.
+
+my $PDTRC = $ENV{'HOME'} . "/" . '.pdtrc';
+my $BSUGAR = Bash::Sugar->new();
+$BSUGAR->sourceenv($PDTRC);
+
+# get the provided filename
+
+my $userid = $ENV{'USER'};
+my $fn     = shift @ARGV;
+chomp $fn;
+
+die("usage: versioninplace <filename>") unless ( length($fn) );
+
+# find the format from file extension
+
+my $pd  = &is_pl($fn);     # perl project
+my $pm  = &is_pm($fn);     # perl module
+my $bd  = is_sh($fn);     # bash detected
+my $pyd = is_py($fn);     # python project (same as module)
+my $cpp = is_cpp($fn);    # cpp file
+
+my $formatfound = 1 if ( $pd || $pm || $bd || $pyd || $cpp );
+
+# find the format from a shebang line
+
+unless ($formatfound) {
+   open( FN, "$fn" );
+   while (<FN>) {
+      $pd++  if ( $_ =~ /perl/ );
+      $pm++  if ( $_ =~ /package/ );
+      $bd++  if ( $_ =~ /bash/ );
+      $pyd++ if ( $_ =~ /python/ );
+      last;
+   }
+}
+
+close(FN);
+
+# put the formats in a selectable order.
+
+$formatfound = 1 if ( $pd || $pm || $bd || $pyd || $cpp );
+my @formatlist = ( $pd, $pm, $bd, $pyd, $cpp );
+
+# throw error if we can't continue
+
+unless ($formatfound) {
+   warn("versioninplace found no supported filetype.");
+   sleep 1;
+   exit;
+}
+
+unless ( -e $fn ) {
+   warn("$fn doesn' t exist ");
+   sleep 1;
+   exit;
+}
+
+### We have a filetype and an existing file
+
+# variables for version and copyright message
+
+my $datestamp = `date +%F\.%H\-%M\-%S\.%Z`;
+chomp $datestamp;
+
+my $copyrightyear = $datestamp;
+$copyrightyear =~ s/\-.*//;
+
+my $copyrightowner = $ENV{'PDT_COPYRIGHT_OWNER'};
+chomp $copyrightowner;
+
+# copyright insert list
+
+# 2d table, processes detected file type against regexps
+# for matching previous inserts, and the actual inserts.
+
+# @formatlist = ( $pd, $pm, $bd, $pyd, $cpp );
+
+my @copyrightmatch = ( qr/^\# Copyright/, qr/^\# Copyright/, qr/^\# Copyright/, qr/^\# Copyright/, qr/^\# Copyright/ );
+
+my @versionmatch = ( qr/^\# VERSION/, qr/^\# VERSION/, qr/^\# VERSION/, qr/^\# VERSION/, qr/^\# VERSION/ );
+
+my @copyrightinsert = (
+   "\# Copyright $copyrightyear " . $copyrightowner . " All Rights Reserved.",
+   "\# Copyright $copyrightyear " . $copyrightowner . " All Rights Reserved.",
+   "\# Copyright $copyrightyear " . $copyrightowner . " All Rights Reserved.",
+   "\# Copyright $copyrightyear " . $copyrightowner . " All Rights Reserved.",
+   "\# Copyright $copyrightyear " . $copyrightowner . " All Rights Reserved."
+);
+
+my @versioninsert = (
+   "\# VERSION " . $datestamp . " last modified by: \($userid\)",
+   "\# VERSION " . $datestamp . " last modified by: \($userid\)",
+   "\# VERSION " . $datestamp . " last modified by: \($userid\)",
+   "\# VERSION " . $datestamp . " last modified by: \($userid\)",
+   "\# VERSION " . $datestamp . " last modified by: \($userid\)"
+);
+
+### formulate the appropriate match/replace
+
+my $thiscmatch;
+my $thisvmatch;
+my $thiscopyright;
+my $thisversion;
+
+my $M = 0;
+foreach (@formatlist) {
+   if ($_) {
+      $thiscmatch    = $copyrightmatch[ $M ];
+      $thisvmatch    = $versionmatch[ $M ];
+      $thiscopyright = $copyrightinsert[ $M ];
+      $thisversion   = $versioninsert[ $M ];
+      last;
+   }
+   $M++;
+}
+
+### do the match replace
+
+# HERE (need to check compiled regexps)
+
+open( FN, "$fn" );
+
+my $file;    #
+my $n = 0;   #
+
+while (<FN>) {
+   my $line = $_ ;
+
+   if ( $n == 2 ) {    # copyright replace or insert
+
+      if ( $line =~ /thiscmatch/ ) {    # line was a previous copyright, we replace.
+         $line = $thiscopyright . "\n";
+      } elsif ( $line !~ /\w+/ ) {     # line was empty, we replace
+            $line = $thiscopyright . "\n";
+      } else {                       # line has content, we insert before it
+            $line = $thiscopyright . "\n" . $line;
+      }
+   }
+
+   if ( $n == 3 ) {                     # version replace or insert
+
+      if ( $line =~ /thisvmatch/ ) {    # line was a previous version, we replace.
+         $line = $thisversion . "\n";
+      } elsif ( $line !~ /\w+/ ) {     # line was empty, we replace
+            $line = $thisversion . "\n";
+      } else {                       # line has content, we insert before it
+            $line = $thisversion . "\n" . $line;
+      }
+   }
+
+   if ( $n == 4 ) {                     # version has a trailing blank line
+      if ( $line =~ /\w+/ ) {
+         $line = "\n" . $line;
+      }
+   }
+
+   $file .= $line;
+}
+
+close(FN);
+
+# DO NOT UNCOMMENT UNTIL AFTER RUNTIME TESTING
+
+# open( FN, ">$fn" );
+# print FN $file;
+
+print $file ;
+

@@ -1,0 +1,25 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-43-53.EDT';
+
+# find only backup files formatted by vimod and viexec
+
+open( FB, "find |" );
+
+while (<FB>) {
+   my $line = $_;
+   chomp $line;
+   my @lt = split(/\//), $line;
+   my $fn = pop @lt;
+   next unless $fn =~ /^\./;
+   my @dt = split(/\./), $fn;
+
+   my $timezone = pop @dt;
+   my $hms      = pop @dt;
+   my $ymd      = pop @dt;
+
+   next unless ( $hms =~ /\d+\-\d+\-\d+/ && $ymd =~ /\d+\-\d+\-\d+/ );
+
+   print "$line\n";
+}

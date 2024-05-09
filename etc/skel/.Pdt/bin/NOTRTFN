@@ -1,0 +1,92 @@
+#! /bin/perl
+
+# .
+
+my $VERSION = '2018-04-10.04-55-14.EDT';
+
+# rtfn (random temp file name)
+
+# VERSION 1.0 (feature complete)
+
+&dohelp if $ARGV[ 0 ] =~ /h/i;
+
+my $t = time();                      # epoch time.
+my $r = int( rand(1000000) + 1 );    # random number
+my $e = '.rtfn';                     # file extension
+my $p = '/tmp';                      # path
+my $x = 3600;                        # tmp files last an hour
+my $X = $t - $x;                     # expire cutoff
+
+$p = $ENV{'PDT_TMP_PATH'} if length( $ENV{'PDT_TMP_PATH'} );
+$p = $ENV{'RTFN_TMP_PATH'} if length( $ENV{'RTFN_TMP_PATH'} );
+
+$x = $ENV{'PDT_TMP_EXPIRE'} if length( $ENV{'PDT_TMP_EXPIRE'} );
+$x = $ENV{'RTFN_TMP_EXPIRE'} if length( $ENV{'RTFN_TMP_EXPIRE'} );
+
+$p =~ s/\/$//g;
+
+opendir( $dh, $p ) || die("unable to open $p");
+
+my @old_tmps;
+
+foreach ( ( readdir($dh) ) ) {
+   next if $_ =~ /^\./;
+   next unless $_ =~ /^\d+\-\d+\.tmp/;
+   my $interval = $_;
+   $interval =~ s/\-.*//g;
+   if ( $interval < $X ) {
+      push @old_tmps, $_;
+   }
+}
+
+closedir($dh);
+
+foreach (@old_tmps) {
+   $_ = $p . '/' . $_;
+
+   # warn "expiring $_" ;
+   unlink $_;
+}
+
+my $rfn = $p . '/' . $t . '-' . $r . $e;
+print $rfn ;
+
+sub dohelp { # 
+   while (<DATA>) { print $_ ; }
+   exit;
+}
+
+__DATA__
+
+rtfn: random temp file name manager. 
+
+usage: rtfn
+
+rtfn prints filenames which are reliably unique 
+for the purposes of generating temp files. rtfn 
+also expires (deletes) old temp files automatically. 
+
+there are two environment variables that can be 
+defined to change rtfn behavior: 
+
+	RTFN_TMP_PATH 
+	
+	defines the location of your temp file 
+	directory. (/tmp is the default) If for 
+	example you want your files to be place 
+	in ~/.tmp you can add the following to 
+	your .bashrc file: 
+
+export RTFN_TMP_PATH=$HOME/.tmp
+
+	RTFN_TMP_EXPIRE
+
+	defines the length of time (in seconds) to 
+	wait before expiring old temp files. This 
+	value is set to one hour (3600) by default. 
+	So for example if you wanted to make the 
+	expire interval two hours you can add the 
+	following to your .bashrc file: 
+
+export RTFN_TMP_EXPIRE=7200
+

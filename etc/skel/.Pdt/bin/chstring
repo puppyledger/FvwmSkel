@@ -1,0 +1,68 @@
+#! /bin/perl 
+
+# \#
+my $VERSION = '2018-04-10.04-42-48.EDT';
+
+#: make a serialized hidden backup of a file before
+#: doing a global match and replace.
+
+use Cwd;
+
+my $fn        = shift @ARGV;
+my $oldstring = shift @ARGV;
+my $newstring = shift @ARGV;
+
+chomp $fn;
+chomp $oldstring;
+chomp $newstring;
+
+die('usage: chstring <filename> <oldstring> <newstring>') unless ( length($fn) && length($oldstring) && length($newstring) );
+
+# generate a serialized backup extension
+
+my $fext;
+open( FEXT, 'date +%F\.%H\-%M\-%S\.%Z |' );
+$fext = <FEXT>;
+close(FEXT);
+chomp $fext;
+$fext = '.' . $fext;
+
+my $path = getcwd();    # get the path
+$path =~ s/\/$//g;      # get rid of trailing slash if one
+$path =~ s/$/\//;       # put one back
+
+# the filename from the CLI may have a partial path
+# so we split and reassemble.
+
+my $fqfn = $path . $fn;
+;                       # the fully qualified filename
+my @_fqfn = split( /\//, $fqfn );    # tokenize fully qualified filename
+$fn = pop(@_fqfn);                   # just filename portion
+my $bfn = '.' . $fn . $fext;         # serialized backup hidden filename
+
+$path = join '/', ( @_fqfn, undef ); # reassemble the path
+$fqfn = $path . $fn;                 # fully qualified filename
+my $fqbn = $path . $bfn;             # fully qualififed backup hidden filename
+
+# sanity check
+
+die('file does not exist: $fqfn') unless ( -e $fqfn );    #
+die('file is a directory: $fqfn') if ( -d $fqfn );        #
+
+print "changing $oldstring to $newstring in $fqfn" . ' [Y/n]';
+my $yn = <STDIN>;
+die("aborting") if $yn =~ /n/i;
+print "\n";
+
+rename( $fqfn, $fqbn ) || die("unable to rename $fqfn to $fqbn");
+open( OLD, "< $fqbn" ) || die("can't read $fqbn");
+open( NEW, "> $fqfn" ) || die("can't overwrite $fqfn");
+
+while (<OLD>) {
+   $_ =~ s/$oldstring/$newstring/g;
+   print NEW $_;
+}
+
+close(OLD);
+close(NEW);
+

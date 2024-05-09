@@ -1,0 +1,43 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-46-49.EDT';
+
+#: usage: M cascade oldmethod newmethod
+
+use Pdt::Method_Cascade;
+use strict;
+
+if ( scalar(@ARGV) == 2 ) {    #
+   my $rtfn_file;
+   my $iscli;                  # flag
+
+   unless ( length( $ENV{'RTFN'} ) ) {
+      $iscli     = 1;
+      $rtfn_file = `rtfn`;
+      warn $rtfn_file;
+   } else {
+      $rtfn_file = $ENV{'RTFN'};
+   }
+
+   my @M = @ARGV;
+
+   my $a_localized_method_name;
+   my $b_cascade_method_name;
+
+   $a_localized_method_name = shift;
+   $b_cascade_method_name   = shift;
+
+   chomp $b_cascade_method_name;
+   open( RTFN, ">$rtfn_file" );
+
+   my $T = Pdt::Method_Cascade->new(
+      'a_localized_method_name' => $a_localized_method_name,
+      'b_cascade_method_name'   => $b_cascade_method_name
+   );
+
+   print RTFN $T->output();
+
+} else {
+   exec "pdt Pdt::Method_Cascade";
+}

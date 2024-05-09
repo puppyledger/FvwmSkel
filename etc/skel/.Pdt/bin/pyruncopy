@@ -1,0 +1,21 @@
+#! /bin/bash
+
+export XOFFICEPATH=/Skel/bin/libreoffice5.3/program
+export VIPYPUBPATH=/Skel/bin/libreoffice5.3/share/Scripts/python
+
+export VIPYBACKUP=.$1.`isotime`
+
+
+echo "BACKING UP"
+echo "$1 --> $VIPYBACKUP"
+
+echo "RUNNING"
+$XOFFICEPATH/python $1  
+
+# uncomment this delay for delicate work. 
+
+echo "BREAK?" 
+sleep 10  
+
+echo "PUBLISHING" 
+cp $1 $VIPYPUBPATH

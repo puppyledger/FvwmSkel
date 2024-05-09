@@ -1,0 +1,1 @@
+.fvwm/.vimrc

@@ -1,0 +1,15 @@
+#! /bin/bash 
+
+#: 
+#: usage:P r 	
+#: 
+#: 		API root class 
+#: 		provides inheritance for a group of classes, 
+#: 		but hands a factory back on construction
+#: 
+#: 		so: 	Foo.pm        API root class
+#: 				Foo/Bar.pm 	  API object class
+#: 
+
+pdt 'Pdt::Primitive_R'
+

@@ -1,0 +1,56 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-46-39.EDT';
+
+# bonk is a categorized warn with output to files and
+# a brief delay with each warn. Here we accelerate
+# writing bonk methods.
+
+use Pdt::Method_SetGet;
+use Sort::Naturally qw(nsort);
+use strict;
+
+my $rtfn_file;
+my $iscli;    # flag
+
+unless ( length( $ENV{'RTFN'} ) ) {
+   $iscli     = 1;
+   $rtfn_file = `rtfn`;
+   warn $rtfn_file;
+} else {
+   $rtfn_file = $ENV{'RTFN'};
+}
+
+my @M = @ARGV;
+
+chomp( $M[ $#M ] ) if scalar(@M);
+my $debugflag = shift @M;
+
+$debugflag = "\tbonk \'$debugflag\', \"$debugflag \", ";
+my $varlist;
+
+open( RTFN, ">$rtfn_file" );
+
+# we add spaces between passed alues
+
+foreach (@M) {    #
+   $varlist .= "$_, \" \",";
+}
+
+# here we remove the last space and comma
+
+$varlist =~ s/\,\s+\"\s+\"\,$/\;\n/;
+
+$debugflag .= $varlist;
+
+print RTFN $debugflag;
+
+close(RTFN);
+
+if ($iscli) {
+   open( RTFN, "$rtfn_file" );
+   while (<RTFN>) { print; }
+   close(RTFN);
+}
+

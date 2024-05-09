@@ -1,0 +1,9 @@
+#! /bin/bash
+
+export W0_INTERFACE=wlp1s0
+export W0_NS1=`egrep -v "\:" /etc/resolv.conf | grep -m 1 nameserver | sed -E 's/\%.*//' | sed -E 's/^nameserver\s+(.*)\s*$/\1/'` 
+
+echo "CONFIGURING: $W0_INTERFACE WITH NAMESERVER: $W0_NS1"
+
+sleep 1
+

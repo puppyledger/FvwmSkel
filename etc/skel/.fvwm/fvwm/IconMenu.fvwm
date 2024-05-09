@@ -1,0 +1,62 @@
+
+# MENUS
+
+# Called from KeyBindings.fvwm
+DestroyFunc Run_IconMenu
+AddToFunc Run_IconMenu
++ I Refresh_IconMenu 
++ I Menu IconClickMenu
+
+DestroyFunc Refresh_IconMenu
+AddToFunc Refresh_IconMenu
++ I DestroyMenu IconClickMenu 
++ I AddToMenu IconClickMenu
++ I + "Destroy"  Icon2Destroy
++ I + "Loop"     Icon2Loop
++ I + "Recall"   Icon2Recall
+
+# USER FUNCTIONS 
+
+DestroyFunc Icon2Destroy
+AddToFunc Icon2Destroy
++ C Destroy
++ C All (CurrentPage, Iconic) PlaceAgain Icon
+
+# VIDEO FUNCTIONS 
+
+# Icon2Video should remove decorations, and deiconify
+# It should also store its windowid in a variable, 
+# so that that WindowID can be recalled, with a 
+# an icon menu command that calls last2icon. 
+# In this way, one icon can control the other, 
+# which gives us the ability to loop content 
+# single click 
+#
+
+# Strip decorations, and display
+DestroyFunc Icon2Display
+AddToFunc Icon2Display
++ I ThisWindow StaysPut
++ I ThisWindow WindowStyle !Title
++ I ThisWindow WindowStyle !Borders
++ I ThisWindow WindowStyle !Handles
++ I ThisWindow WindowStyle WindowListSkip
++ I UpdateStyles
++ I SetEnv LASTDISPLAYED $[w.id]
++ I Iconify False
+
+# iconify previously displayed window, and redercorate it  (effects peer window) 
+DestroyFunc Icon2Recall
+AddToFunc Icon2Recall
++ I WindowID $[LASTDISPLAYED] Iconify True 
++ I WindowID $[LASTDISPLAYED] DestroyWindowStyle
++ I UpdateStyles
+
+# Loop display and recall, allowing single click splicing 
+DestroyFunc Icon2Loop
+AddToFunc Icon2Loop
++ I SetEnv QUEDISPLAY $[w.id]
++ I Icon2Recall
++ I WindowID $[QUEDISPLAY] Focus  
++ I Icon2Display
+

@@ -1,0 +1,19 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-43-26.EDT';
+
+use Pdt::SourceEnv qw(:all);
+use strict;
+
+my $pdtrc = $ENV{'HOME'} . "/" . '.pdtrc';
+sourceenv($pdtrc);
+
+die("usage: doexec \<command\>") unless ( length( $ARGV[ 0 ] ) );
+chomp $ARGV[ $#ARGV ];
+my $thiscommand = shift @ARGV;
+my $binpath     = $ENV{'PDT_BIN_PATH'};
+
+$thiscommand = $binpath . '/' . $thiscommand . " " . ( join " ", @ARGV );
+
+exec($thiscommand);
+

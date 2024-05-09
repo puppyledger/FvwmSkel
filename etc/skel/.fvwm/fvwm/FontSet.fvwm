@@ -1,0 +1,11 @@
+# Default font
+Style	*	Font            9x15
+
+# Default menufont 
+MenuStyle * Font -adobe-courier-bold-r-*-*-14-*-*-*-*-*-*-*
+
+# DefaultFont  -adobe-times-bold-r-*-*-18-*-*-*-*-*-*-*
+# Style * Font            -adobe-times-bold-r-*-*-18-*-*-*-*-*-*-*
+# Style * IconFont        9x15
+# Style * IconFont        -adobe-helvetica-bold-r-*-*-10-*-*-*-*-*-*-*
+

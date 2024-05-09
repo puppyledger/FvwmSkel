@@ -1,0 +1,27 @@
+#! /home/x1/.fvwm/bin/perl
+
+#
+# Get a windowid with a window title. 
+#
+
+use X11::Tops ; 
+use strict ; 
+
+my $xtops = X11::Tops->new ;
+$xtops->update ;
+
+my $r = shift @ARGV ; 
+die ("match regexp required.") unless ($r =~ /\w+/) ; 
+chomp $r ; 
+
+my %id ; 
+for my $xtop (@{$xtops->sorted}) {
+	$id{$xtop->title()} = $xtop->id() ; 
+}
+
+foreach my $k (keys %id) {
+	if ($k =~ /$r/) {
+		print $id{$k}  ; 
+		last ; 
+	}
+}

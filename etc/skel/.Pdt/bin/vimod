@@ -1,0 +1,207 @@
+#! /usr/bin/perl
+
+# vimod: vimod is an editor wrapper for vim that
+# provides it integration with the Pdt IDE suite.
+# PDT = Perl Development Tools
+
+use Bash::Sugar ; 
+use File::Copy  ; 
+use File::Path  qw(make_path remove_tree) ; 
+use Getopt::Std ; 
+use Pdt::Bonk ;
+use strict ;
+
+my $_DEBUG = 0;
+
+my $BSUGAR = Bash::Sugar->new() ; 
+$BSUGAR->sourceenv( $ENV{'PDT_PDTRC'} );    # make the environment current
+
+umask( $ENV{'PDT_UMASK'} ) if ( length( $ENV{'PDT_UMASK'} ) );
+
+my %OPTS;
+getopts( 'p:dguh', \%OPTS );
+
+my $command = $0;
+chomp $command;
+
+# INIT (initialization commands are just passed on to setpdtrc)
+
+my $initcommand;
+$initcommand .= " -p $OPTS{'p'}" if length( $OPTS{'p'} );
+$initcommand .= " -d"            if defined $OPTS{'d'};
+$initcommand .= " -g"            if defined $OPTS{'g'};
+$initcommand = "setpdtrc " . $initcommand if length($initcommand);
+system($initcommand) if length($initcommand);
+
+# INPUT
+
+my $module = shift @ARGV;
+chomp $module;
+
+# tab completion may accidentally append the .pm, we don't need it. 
+
+if ($module =~ /\.pm$/i) {
+	$module =~ s/\.pm$//i ; 
+} 
+
+my $zoomline = shift @ARGV;
+chomp $zoomline;
+
+### this is in .bashrc: in FvwmSkel the proggy is called "oncd"
+
+# set the window title to our desired module
+system("$ENV{'PROMPT_COMMAND'} $module") if $ENV{'PROMPT_COMMAND'};
+
+### user the module name to generate the filename
+
+my $cfn = $BSUGAR->class2fn($module) ; # filename for the class
+my $cfqfn = $ENV{'PDT_LIB_PATH'} . "/" . $cfn ; # fully qualified to lib path
+
+my $bfn = $BSUGAR->class2bfn($module) ; # backup filename for the class
+my $bfqfn = $ENV{'PDT_LIB_PATH'} . "/" . $bfn ; # fully qualified to lib path
+
+### set our editing target so macros can no where to find it. 
+
+$ENV{'PDT_EDIT_FILE'}  = $cfqfn;
+$ENV{'PDT_EDIT_CLASS'} = $module;
+
+# here we check the file for a sig in the form of #S <username>
+# we will autoscroll to that if it exists, or autoscroll to the 
+# cli argument next just like vi, or start at the beginning. 
+
+my $foundestamp = `findestamp $cfqfn` ;
+chomp $foundestamp; 
+
+$zoomline = $foundestamp if ($foundestamp > 0) ; 
+chomp $zoomline ; 
+
+# bad package names can lead to wild goose chases,
+# so reach in the file and get the actual package line
+# and compare it
+
+warn "CHECKING CLASS MISMATCH: $cfqfn" if $_DEBUG ; 
+
+if (-e $cfqfn) {
+	my $cln = $BSUGAR->showpack($cfqfn) ; 
+
+	warn "PACKLINE: $cln" if $_DEBUG ; 
+
+	if ( length($cln) ) {
+   	unless ( $cln eq $module ) {
+      	warn "WARNING: \n\n\tYou are editing: \t$module\n\tIt thinks it is: \t$cln\n\n";
+			sleep 2; 
+   	}
+	}
+} 
+
+my $efext = '.ERR';            # error file extension
+my $efn   = $cfqfn . $efext;   # error file name
+
+### DEPENDENT DIRECTORIES
+
+my $fd = $cfqfn ;
+my @dirtok = split( /\//, $fd ) ;
+pop @dirtok ;
+$fd = join '/', @dirtok ;
+
+warn "CHECKING CONTAINING DIRECTORY: $fd" if $_DEBUG;
+
+unless ( -d $fd ) {
+   print "Dependent directory $fd does not exist. Create [Y/n]";
+   my $i = <STDIN>;
+   die("exiting.") if $i =~ /n/i;
+   warn "mkdir -p $fd" if $_DEBUG;
+	make_path($fd, 'mode' => $ENV{'PDT_MODE'}, 'group' => $ENV{'PDT_GROUP'}) ; 
+   die("unable to mkdir") unless ( -d $fd );
+}
+
+### EDIT
+
+my $ecmd = $ENV{'PDT_EDITOR'} . " " . $cfqfn . " " . $zoomline;
+warn $ecmd if $_DEBUG;
+system("$ecmd");
+
+### TIDY
+
+# Note: perltidy should create a parallel file with an extension filename.pm.ERR if there 
+# there are detected errors in the file # bext is the backup. The copy() method below may be redundant. 
+# not sure. 
+
+
+my $ptstring = 'perltidy -b -bext=' . $bfqfn . ' -ole=unix -sil=0 -isbc -i=3 -syn -ce -l=160 -sbt=0 ' . $cfqfn;
+
+warn "ptstring: $ptstring" if $_DEBUG;
+sleep 2 if $_DEBUG;
+
+system($ptstring);
+system("subtidy $cfqfn");
+
+### MAKE AUTOMATIC BACKUP
+
+warn "backing up $cfqfn to $bfqfn" if $_DEBUG;
+copy($cfqfn, $bfqfn) ; 
+
+### AUTOUPDATE THE VERSION
+
+# Note: The code for these comes mostly from pdt, (may have to look at older code) 
+# it hasn't be adapted yet, but it should forcibly update lines 3 and 4 of the 
+# and only clobber like lines. 
+
+# $BSUGAR->versioninplace($cfqfn) ; 
+# $BSUGAR->copyrightinplace($cfqfn) ; 
+
+# PERMISSION
+
+# if we wrote an error file, we sign it, and then print it.
+
+if ( -e $efn ) {
+   open( LEF, ">>$efn" ) || exit;
+   print LEF "\nLAST USER TO EDIT THIS FILE:  $ENV{'USER'}\n";
+   close(LEF);
+   open( LEF, "$efn" ) || exit;
+
+   my $zoomerror;    # the first error line number
+   my $zoomtext;     #
+   my $zef;          # flag indicating it has been set
+
+   while (<LEF>) {
+      unless ($zef) {
+         if ( $_ =~ /^\d+:\s+/ ) {
+            $zoomerror = $_;
+            chomp $zoomerror;
+            $zoomerror =~ s/\:.*//g;
+            $zef = 1;
+         }
+      }
+
+      print $_ ;
+   }
+
+   print "\nRETURN TO LINE $zoomerror? (y/n)";
+   my $yn = <STDIN>;
+
+   exit unless $yn =~ /y/i;
+
+   my $editcommand = "$0 $module \+$zoomerror";
+   $editcommand =~ s/^\/\//\//g;    # workaround. Don't stack the root slash.
+
+   # warn $editcommand ;
+   # sleep 2 ;
+
+   exec("$editcommand");
+
+} else {
+
+   # SCM stuff goes here
+
+   if ( defined( $OPTS{'u'} ) ) {    # git add
+      system( setpdtrc -u );
+   }
+
+   exit;
+}
+
+sub dohelp {
+   print "not yet implemented.\n";
+}
+

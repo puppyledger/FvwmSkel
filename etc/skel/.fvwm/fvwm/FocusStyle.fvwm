@@ -1,0 +1,23 @@
+
+# Focus Follows Mouse, windows must be clicked on to raise
+Style * SloppyFocus, MouseFocusClickRaises
+
+# Don't focus on icons 
+Style * CirculateSkipIcon
+
+# click/release must occur in <n milliseconds to be a "click"
+ClickTime 250
+
+# if the window occupies less than n% of the screen, draw it opaque
+OpaqueMoveSize 5
+
+# flip by whole pages on the edge of the screen, but delay 
+EdgeScroll 100 100
+EdgeResistance 800 40
+
+# MWM Emulation: Don't ignore hints for functions and transient decoration
+Style * MWMFunctions, MWMDecor
+
+# Tile new windows if we can, cascade them if we can't
+Style * TileCascadePlacement
+

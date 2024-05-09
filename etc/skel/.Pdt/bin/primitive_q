@@ -1,0 +1,21 @@
+#! /bin/bash 
+
+# \#
+export VERSION='2018-04-10.04-52-35.EDT'
+
+#:
+#: usage:P q
+#:
+#:       API self registering query class. 
+#: 		similar to a basic object, but expects 
+#:			a cbprepare callback set to exist, 
+#: 		which makes database prepare statements 
+#:			register at program startup rather than 
+#: 		runtime.  
+#: 
+#:       so:   Foo.pm        		  API root class       
+#:             Foo/TableFunc.pm    API query class
+#: 
+
+pdt 'Pdt::Primitive_Q'
+

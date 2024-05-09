@@ -1,0 +1,23 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-48-08.EDT';
+
+unless ( length( $ENV{'RTFN'} ) ) {
+   warn "no RTFN environment variable defined";
+   sleep 3;
+   exit;
+}
+
+my @M = @ARGV;
+
+chomp( $M[ $#M ] ) if scalar(@M);
+
+open( RTFN, ">$ENV{'RTFN'}" );
+
+foreach (@M) {
+   print RTFN "\nsub $_ \{ \#\n\n\}\n";
+}
+
+close(RTFN);
+

@@ -1,0 +1,9 @@
+#! /bin/bash
+
+# until a better solution comes up, hostnames are the 
+# same as usernames, and the username will designate 
+# the homestation. In this fashion comparison of 
+# currentstation allows differentiation of tty/vty
+# based access. 
+
+echo $USER  

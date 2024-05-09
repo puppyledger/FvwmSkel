@@ -1,0 +1,106 @@
+#! /usr/bin/perl
+
+use strict;
+
+unless ( length( $ENV{'RTFN'} ) ) {
+   warn "no RTFN environment variable defined" ;
+	sleep 3; 
+   exit;
+}
+
+### CLI (arguments are filenames)
+
+my @M = @ARGV;
+chomp( $M[ $#M ] ) if scalar(@M);
+
+warn "CLI elements: ", scalar(@M);
+sleep 3 ; 
+
+# THE REPORT
+
+my $efo = 0;    # error file open
+open( RTFN, ">$ENV{'RTFN'}" ) || $efo++;
+
+if ($efo) {
+   warn $@ ;
+   warn "Unable to open $ENV{'RTFN'} for writing.";
+   sleep 3;
+}
+
+warn "$ENV{'RTFN'} OPEN for writing.";
+
+foreach my $fn (@M) {
+   $fn = bashexpand($fn);    # Pdt::SourceEnv ;
+   warn $fn ;
+
+   if ( $fn =~ /\*$/ ) {
+      push @M, starexpand($fn);
+      next;
+   }
+
+   warn "encoding $fn";
+   my $fc = doencodefile($fn);
+   warn "$fn not found" unless defined $fc;
+   next unless defined $fc;
+   my ( $estart, $eend ) = fn2sub($fn);
+   print RTFN $estart, $fc, $eend;
+}
+
+warn "write complete";
+
+close(RTFN);
+
+# HERE sn is not having its file extension truncated
+
+sub fn2sub { # filename to subroutine
+   my $fn = shift;    # file name
+   my $sn = $fn;      # sub name
+   my $hn;            # here document name
+
+   $sn =~ s/^.*\///g; # last token in path
+   $fn = $sn;         #
+   $sn =~ s/^\.//;    # if hidden, unhide
+   $sn =~ s/\..*$//;  # if file extensions, take the first token.
+   $hn = $sn;             # here document name
+   $sn =~ tr/A-Z/a-z/;    # subname is lc
+   $hn =~ tr/a-z/A-Z/;    # herename is uc
+
+   my $estart = "sub $sn \{ \# " . $fn . "\n\n";
+   $estart .= 'my $encoded = <<' . "\"$hn\"\;" . "\n";
+
+   my $eend = "$hn\n\n";
+   $eend .= 'return $encoded;' . "\n";
+   $eend .= "\}\n";
+
+   return ( $estart, $eend );
+}
+
+sub doencodefile { # 
+   my $fn = shift;
+
+   my $fc;
+
+   my $buf;
+   my $efo = 0;
+
+   open( FILE, "cat $fn | par |" ) || $efo++;
+
+   if ($efo) {
+      warn "$fn not readable, or possibly par is not installed.";
+      return undef;
+   }
+
+   warn "encoding file";
+
+   while ( read( FILE, $buf, 60 * 57 ) ) {
+      $fc .= $buf;
+   }
+
+   close(FILE);
+
+   # here we try and pipeline through par if it is installed.
+
+   warn "file encoded length: ", length($fc);
+
+   return $fc;
+}

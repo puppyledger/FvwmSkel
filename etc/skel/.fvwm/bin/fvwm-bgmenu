@@ -1,0 +1,3 @@
+#! /home/x1/.fvwm/bin/tcsh
+
+ls $WALLPAPERPATH | pexp 's/(.*)/$1 $1/' | pexp 's/^/\+ /' | pexp 's/(\+ \w+)\.\w+ (.*)/$1 $2/' | pexp 's/(\+ \w+ )/$1 Exec Esetroot \-scale \-display $ENV{'DISPLAY'}  $ENV{'WALLPAPERPATH'}\//' | pexp 's/\+ (\w+)/\+ \"$1\"/'

@@ -1,0 +1,31 @@
+
+# This menu is clickable on the title bar of any window. We include 
+# reference to the aterm/rxvt font resize macro via numberpad +/-
+# we also make available a simple xterm for diagnostic reasons. 
+# Also included is screencasting and capture controls. 
+
+DestroyFunc Refresh_TitlebarMenu
+AddToFunc Refresh_TitlebarMenu
++ I DestroyMenu IconClickMenu 
++ I AddToMenu IconClickMenu
++ I + "&Plus Font"  Exec $[SKELPATH]/local/bin/fvwm-termplus
++ I + "&Minus Font" Exec $[SKELPATH]/local/bin/fvwm-termminus
++ I + ""        Nop
++ I + "Xterm" Exec rxvt -sl 500 -bg black -fg green -geometry 80x20 -title $[PWD] -n $[HOSTNAME] -sr 
++ I + ""        Nop
++ I + "&Window Screenshot"  Exec $[SKELPATH]/local/bin/screenshot_window $[w.id]
++ I + "&Desktop Screenshot" Exec $[SKELPATH]/local/bin/screenshot_desktop $[w.id]
++ I + ""        Nop
++ I + "Window &Screencast"  Exec $[SKELPATH]/local/bin/video_simplestart -i $[w.id]
++ I + "Desktop Screen&cast" Exec $[SKELPATH]/local/bin/video_simplestart
++ I + "Screencast &End"     Exec $[SKELPATH]/local/bin/video_simplestop
++ I + ""        Nop
++ I + "Audio &Record" Exec $[SKELPATH]/local/bin/audio_simplestart
++ I + "Audio O&ff" Exec $[SKELPATH]/local/bin/audio_simplestop
++ I + ""        Nop
++ I + "X Window&ID" Exec xmessage $[w.id] 
+
+DestroyFunc Run_TitlebarMenu
+AddToFunc Run_TitlebarMenu
++ I Refresh_TitlebarMenu 
++ I Menu IconClickMenu

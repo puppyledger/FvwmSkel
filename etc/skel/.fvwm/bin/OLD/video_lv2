@@ -1,0 +1,31 @@
+#! /home/x1/.fvwm/bin/perl
+
+# Last Video to: 
+# copy last video to specified filename 
+
+use Cwd ; 
+my $localcwd = getcwd ; 
+
+my $FN = $ARGV[0] ; 
+chomp $FN ; 
+die ("usage lv2 filename.mkv") unless $FN =~ /\w+/ ; 
+
+my $home = $ENV{'HOME'} ; 
+chomp $home ; 
+$home =~ s/\/$//g ; 
+
+$sfn = `fvwm-getenv VIDEOFN` ;  
+chomp $sfn  ; 
+die ('no video captured')  unless $sfn =~ /\w+/ ;   
+
+# check fq
+my $mydir ; 
+$mydir = $FN if $FN =~ /^\// ; 
+$mydir = $localcwd . '/' . $FN unless $FN =~ /^\// ; 
+
+print "mv $sfn $mydir\n"  ; 
+print ('y/n?' . "\n") ; 
+my $confirm = <STDIN> ; 
+exec "mv $sfn $mydir" if $confirm =~ /y/i ; 
+
+

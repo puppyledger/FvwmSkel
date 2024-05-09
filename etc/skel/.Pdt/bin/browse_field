@@ -1,0 +1,42 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-37-58.EDT';
+
+#: list the fields in a Base:T derived class
+
+use Getopt::Std;    # CLI options
+use Sort::Naturally qw(nsort);
+
+my %OPTS;
+getopts( 'f:c', \%OPTS );
+my $fn = $OPTS{'f'};    # the file we will embed
+my $foo;                # the object
+
+die('usage: lsfields -f <filename> -c includecomments') unless defined $fn;
+
+open( FN, $fn );
+my $line = readline(FN) || die( "$fn", '... going blind are we?' );
+close(FN);
+
+chomp $line;
+die('not a package?') unless $line =~ /package/;
+
+$line =~ s/^\s*package\s*//;
+$line =~ s/\#.*$//;      # remove comments
+$line =~ s/\;.*/\;/g;    # removed crammed perl
+my $class = $line;       # Store the class name
+$class =~ s/\;//;        #
+$line =~ s/^/use /;      #
+$line = $line . '$foo = ' . $class . '->new();';
+
+eval $line;
+die $@ if $@;
+
+my @fields = $foo->fields();
+@fields = sort(@fields);
+print "\n" . '#####################' . "\n" . '# CLASS: ' . $class . "\n" if defined $OPTS{'c'};
+foreach (@fields) {
+   print $_ . "\n";
+}
+

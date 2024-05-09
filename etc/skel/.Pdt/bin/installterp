@@ -1,0 +1,116 @@
+#! /bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-44-18.EDT';
+
+# install a script with a specified interpreter
+
+use Cwd;
+use File::Copy;
+
+use strict;
+
+my $sd = shift @ARGV;
+chomp $sd;    # source directory
+my $td = shift @ARGV;
+chomp $td;    # target directory
+my $terp = shift @ARGV;
+chomp $terp;    # target interpeter
+
+die("usage: installterp <sourcedir> <targetdir> <interpeter>") unless ( length($sd) && length($td) && length($terp) );
+
+# make both directores fully qualified
+# if they are relative paths.
+
+my $path = getcwd();
+
+$path =~ s/\/$//g;    # get rid of trailing slash if one
+$sd =~ s/\/$//g;      # get rid of trailing slash if one
+$td =~ s/\/$//g;      # get rid of trailing slash if one
+
+$path =~ s/$/\//;     # put one back
+$sd =~ s/$/\//;       # put one back
+$td =~ s/$/\//;       # put one back
+
+my $fqsd;
+my $fqtd;
+
+unless ( $sd =~ /^\// ) {
+   $fqsd = $path . $sd;
+} else {
+   $fqsd = $sd;
+}
+
+unless ( $td =~ /^\// ) {
+   $fqtd = $path . $td;
+} else {
+   $fqtd = $td;
+}
+
+# warn $fqsd ;
+# warn $fqtd ;
+
+# sanity check stringify the interpreter
+
+die("$fqsd not a directory")       unless ( -d $fqsd );
+die("$fqtd not a directory")       unless ( -d $fqtd );
+die("$terp interpreter not found") unless ( -e $terp );
+
+# tokenize the full paths
+
+my @_fqsd = split( /\//, $fqsd );
+my @_fqtd = split( /\//, $fqtd );
+
+# get a list of files, prune hiddens and directories.
+
+opendir( SD, $fqsd ) || die("unable to open $fqsd");
+my @allprog = readdir(SD);
+close(SD);
+
+# warn @allprog ;
+
+for ( my $n = 0 ; $n < scalar(@allprog) ; $n++ ) {
+
+   # dot files are not programs, ignore them.
+
+   if ( $allprog[ $n ] =~ /^\./ ) {
+      splice( @allprog, $n, 1 );
+      $n--;
+      next;
+   }
+
+   # directories are not programs. ignore them.
+
+   my @this_sd = @_fqsd;
+   my $fqsf = join '/', @this_sd, $allprog[ $n ];
+
+   if ( -d $fqsf ) {
+      splice( @allprog, $n, 1 );
+      $n--;
+      next;
+   }
+
+}
+
+#  assemble the files into fully qualified
+#  paths, copy, and change the installed
+#  interpreter line.
+
+foreach (@allprog) {
+   my @this_sd = @_fqsd;
+   my @this_td = @_fqtd;
+   push @this_sd, $_;
+   push @this_td, $_;
+
+   my $fqsf = join '/', @this_sd;
+   my $fqtf = join '/', @this_td;
+
+   # print "cp $fqsf $fqtf\n" ;
+   # print "chterp $fqtf $terp\n" ;
+
+   copy( $fqsf, $fqtf ) || warn("unable to top $fqsf to $fqtf");
+
+   system("chterp $fqtf $terp");
+   system("chmod +x $fqtf");
+}
+

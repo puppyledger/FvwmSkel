@@ -1,0 +1,17 @@
+#! /bin/bash 
+
+export VERSION='2018-04-10.04-53-00.EDT'
+
+#:
+#: usage:P o
+#:
+#:       API object class, providing a self registering 
+#: 		autolithic object constructor. May be modified 
+#: 		to a plurolithic object constructor by comment. 
+#: 
+#:       so:   Foo.pm        API root class    
+#:             Foo/Bar.pm    API object class
+#: 
+
+
+pdt 'Pdt::Primitive_Window'

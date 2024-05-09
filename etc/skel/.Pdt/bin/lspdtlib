@@ -1,0 +1,10 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-45-41.EDT'
+
+# this is eval'd into our environment as an alias statement. 
+# it is what makes lslib work
+
+source $HOME/.pdtrc
+echo "ls $PDT_LIB_PATH"

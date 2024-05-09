@@ -1,0 +1,18 @@
+#! /Skel/bin/perl
+
+# first ether: show the first ethernet interface on the machine
+# should work regardless of naming convention. 
+
+open (PND, '/proc/net/dev') || die ('failed to open: /proc/net/dev') ; 
+while(<PND>) { #
+        next if $_ =~ /\|/ ;
+        $_ =~ s/^\s+//g ;
+        $_ =~ s/\:.*//g ;
+        chomp $_        ;
+	if ($_ =~ /^[en|eth]/) {
+		print $_ ; 
+		close(PND) ; 
+		exit ; 
+	} 
+}      
+

@@ -1,0 +1,30 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-38-31.EDT';
+
+#:
+#: usage: B: package <optional classprefix>
+#:
+#: browse package: show a list of all packages.
+#: if a prefix is provided, show only those packages
+#: that have that prefix.
+#:
+
+use Sort::Naturally qw(nsort);
+use strict;
+
+system("clear");
+
+my $prefix = shift @ARGV;
+chomp $prefix;
+
+open( LSLIB, "lspack $prefix |" ) || die $@;
+
+while (<LSLIB>) {
+   print $_ ;
+}
+close(LSLIB);
+
+while (<STDIN>) { exit; }
+

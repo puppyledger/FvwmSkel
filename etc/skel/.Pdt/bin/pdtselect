@@ -1,0 +1,130 @@
+#! /Skel/bin/perl -w
+
+my $VERSION = '2018-04-10.04-51-24.EDT';
+
+# Simple Perl/Tk GUI that allows us to select a
+# working project from a list.
+
+use Cwd;
+use Tk;
+use X11::Xlib;
+use Pdt::SourceEnv qw(:all);
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+### GET A PROJECT LIST
+
+# here we use the pdt flag file to get a list of projects that
+# have been configured by setpdtrc.
+
+my $pdff = $ENV{'PDT_FLAG_FILE'};
+$pdff =~ s/^.*\///g;    # just the filename
+
+my @f;
+chdir( $ENV{'PDT_ROOT'} );    # change to the project root
+open( PROJECTLIST, "find -maxdepth 2 -name $pdff |" );
+
+while (<PROJECTLIST>) {       #
+   chomp $_;
+   $_ =~ s/\/$pdff$//;
+   $_ =~ s/^\.*\///g;
+   push @f, $_;
+}
+
+# now we should get and set the active project if there is one
+
+my $activeindex = undef;      # numerical index
+
+for ( my $n = 0 ; $n < scalar(@f) ; $n++ ) {
+
+   if ( $f[ $n ] eq $ENV{'PDT_ACTIVE'} ) {
+      $activeindex = $n;
+   }
+}
+
+### GUI
+
+# now we fire up the selection menu and post ourselves to the
+# desktop
+
+my $fvwmcmd = $ENV{'XTOOLPATH'} . '/FvwmCommand';
+
+my $onceflag = 0;
+
+# GEOMETRY
+
+my $display        = X11::Xlib->new();
+my $screenwidth    = $display->DisplayWidth();
+my $screenheight   = $display->DisplayHeight();
+my $windowwidth    = 360;
+my $windowheight   = 200;
+my $offsetwidth    = int( ( $screenwidth - $windowwidth ) / 2 );
+my $offsetheight   = int( ( $screenheight - $windowheight ) / 2 );
+my $offsetgeometry = $windowwidth . 'x' . $windowheight . '+' . $offsetwidth . '+' . $offsetheight;
+my $eindex         = $ENV{'PDT_ACTIVE'};                                                              # environment selected index
+my $sindex;                                                                                           # user selected index
+
+# Construct GUI
+
+my $MW = MainWindow->new();                                                                           # Tk MW
+$MW->geometry($offsetgeometry);
+my $WindowID = $MW->id();
+
+my $L1 = $MW->Label( -justify => 'center', -textvariable => \$XUPP )->pack( -side => "left", -anchor => "n", -expand => '1', -fill => 'x' );
+my $E1 = $MW->Scrolled( "Listbox", -scrollbars => 'e', -selectmode => 'single', -width => 100 )->pack( -side => "right", -anchor => "n" );
+
+$E1->insert( 'end', @f );
+
+if ( defined($activeindex) ) {
+   $E1->selectionSet($activeindex);
+   $E1->activate($activeindex);
+   $E1->see($activeindex);
+   $E1->focus();
+}
+
+$E1->bind( '<ButtonRelease-1>'   => \&myselect );
+$MW->bind( '<KeyRelease-Return>' => \&doyes );
+$MW->bind( '<KeyRelease-Escape>' => \&dono );
+
+# HERE, keybind up/down to move the selection and the ptr up
+# and down, kk
+
+&warp2me( \$onceflag ) unless $onceflag;
+
+MainLoop;
+
+sub myselect { # do nothing if the selection is the current one
+   $sindex = $E1->get('active');
+}
+
+sub dono {
+   exit;
+}
+
+sub doyes { # 
+   exit unless ( length($sindex) );    # a return without selection
+   exit if ( $sindex eq $eindex );     # the project is already selected
+
+   my $commandblock = "xterm -e \"" . 'setpdtrc -p ' . $sindex . " \; waitreturn\"";
+   $MW->withdraw();
+
+   exec($commandblock);
+}
+
+sub warp2me {
+   my $onceflag  = shift;
+   my $warpblock = $fvwmcmd . ' \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'';
+   warn $warpblock;
+   system($warpblock);
+   $$onceflag++;
+}
+
+sub dohelp {
+   while (<DATA>) {
+      print $_ ;
+   }
+}
+
+__DATA__
+
+

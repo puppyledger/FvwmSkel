@@ -1,0 +1,42 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-50-51.EDT';
+
+use Pdt::SourceEnv qw(:all);
+use Pdt::SeePack qw(:all);
+
+use strict;
+
+# get our environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# warn "ACTIVE DIR: ", $ENV{'PDT_ACTIVE_DIR'}, " " ;
+
+# get the class from the CLI
+
+my $class = shift(@ARGV);
+chomp $class;
+die('no class specified') unless length($class);
+
+# get the respective filename
+
+my $fn = class2fn($class);
+
+# warn "CLASS2FN: $fn" ;
+
+my $R = seeheaderreport($fn);
+$R .= seemethodreport($fn);
+
+# get a random temp file and write our help data to it.
+
+my $rtfn = system("rtfn");
+open( RTFN, ">$rtfn" ) || die("unable to open tempfile");
+print RTFN $R;
+close(RTFN);
+
+# edit it as our viewer.
+
+exec("vim $rtfn");
+

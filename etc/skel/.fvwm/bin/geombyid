@@ -1,0 +1,74 @@
+$! /Skel/bin/perl
+
+# NOT WORKING: jma Sun Jun  4 09:41:01 EDT 2017
+
+my $winid = shift @ARGV ; 
+chomp $winid ; 
+die ("usage: geombyid <windowid>") unless $winid =~ /\d+/ ; 
+
+my $offsetx ; 
+my $offsety ; 
+my $sizex ; 
+my $sizey ; 
+
+open (WINDAT, "$ENV{'XWININFOCMD'} -id $winid |") || die ("unable to runxwininfo, check path.") ; 
+
+while(<WINDAT>) {
+	if ($_ =~ /Width:/) { # 
+		$sizex = $_ ; 
+		$sizex =~ s/\D//g ; 
+		$sizex = makeeven($sizex) ; 
+		next ; 
+	}
+	if ($_ =~ /Height:/) { # 
+		$sizey = $_ ; 
+		$sizey =~ s/\D//g ; 
+		$sizey = makeeven($sizey) ; 
+		next ; 
+	}
+	if ($_ =~ /Absolute upper-left X:/) { # 
+		$offsetx = $_ ; 
+		$offsetx =~ s/\D//g ; 
+		$offsetx = makeeven($offsetx) ; 
+		next ; 
+	}
+	if ($_ =~ /Absolute upper-left Y:/) { # 
+		$offsety = $_ ; 
+		$offsety =~ s/\D//g ; 
+		$offsety = makeeven($offsety) ; 
+		next ; 
+	}
+}
+
+my $vidattrs =  " -s " . $sizex . 'x' . $sizey . " -i :0.0+" . $offsetx . ',+' . $offsety  . " " ; 
+print $vidattrs ; 
+
+sub makeeven { # some codecs don't like odd window sizes
+	my $v = shift ; 
+	$v++ if ($v % 2) ; 
+	return $v ; 
+}
+
+__DATA__
+
+  Absolute upper-left X:  2
+  Absolute upper-left Y:  426
+  Relative upper-left X:  0
+  Relative upper-left Y:  0
+  Width: 681
+  Height: 340
+  Depth: 24
+  Visual: 0x23
+  Visual Class: TrueColor
+  Border width: 0
+  Class: InputOutput
+  Colormap: 0x20 (installed)
+  Bit Gravity State: ForgetGravity
+  Window Gravity State: SouthWestGravity
+  Backing Store State: NotUseful
+  Save Under State: no
+  Map State: IsViewable
+  Override Redirect State: no
+  Corners:  +2+426  -683+426  -683-2  +2-2
+  -geometry 95x24+0-0
+

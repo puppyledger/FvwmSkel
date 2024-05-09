@@ -1,0 +1,17 @@
+#! /usr/local/bin/perl
+
+my $VERSION = '2018-04-10.04-43-16.EDT';
+
+#: Strip pod from a class so we can read it
+
+use strict;
+use Pod::Stripper;
+
+my $Stripper = new Pod::Stripper();
+
+$Stripper->parse_from_filehandle( \*STDIN ) unless (@ARGV);
+
+for my $ARGV (@ARGV) {
+   $Stripper->parse_from_file($ARGV);
+}
+

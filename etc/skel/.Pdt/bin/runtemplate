@@ -1,0 +1,174 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-55-22.EDT';
+
+#: Template Dialog Tool
+
+# my $defaultlibpaths = $ENV{'PERL_PATHMODULES'} ;
+# eval($defaultlibpaths)  ;
+# die $@ if $@ ;
+
+use Getopt::Std;                  # CLI options
+use Sort::Naturally qw(nsort);    #
+
+# disable non-fatal errors.
+local $SIG{__WARN__} = sub { };
+
+my %OPTS;
+getopts( 't:f:oih', \%OPTS );
+
+&dohelp if $OPTS{'h'};
+
+system('clear');
+
+my $class     = $OPTS{'t'};
+my $writefile = $OPTS{'f'};
+my $ignore_ev = 1 if $OPTS{i};    # ignore environment variables
+
+chomp $class;
+chomp $writefile;
+
+die('usage: runtemplate -t <modulefile> [-f <filetowrite> || -o <stdout>]') unless $class =~ /\w+/;
+die('usage: runtemplate -t <modulefile> [-f <filetowrite> || -o <stdout>]') unless ( $writefile =~ /\w+/ || exists $OPTS{o} );
+
+warn "foo";
+
+if ( $class =~ /\.pm$/ ) {
+   my $fn = $class;
+   open( FN, $fn );
+   my $line = readline(FN) || die( "$fn", '... going blind are we?' );
+   close(FN);
+   chomp $line;
+   die('not a package?') unless $line =~ /package/;
+   $line =~ s/^\s*package\s*//;
+   $line =~ s/\#.*$//;    # remove comments
+   $line =~ s/\;.*//g;    # removed crammed perl
+   $class = $line;
+}
+
+my $block = $defaultlibpath . 'use ' . $class . ';';
+eval($block);
+die $@ if $@;
+
+my $T;
+my $tblock = '$T = ' . $class . '->new();';
+sleep 1;
+eval($tblock);
+die $@ if $@ =~ /\w+/;
+
+my @flist;
+my %fpairs;
+@flist = $T->fields();
+die('no fields present') unless scalar(@flist);
+
+print "Creating File: $writefile\n";
+
+foreach my $fieldname ( nsort(@flist) ) {
+   unless ($ignore_ev) {    # use environment variables unless -i
+      my $ufn = $fieldname;
+      $ufn =~ tr/a-z/A-Z/;    # uppercase fieldname
+      $fpairs{$fieldname} = $ENV{$ufn} if $ENV{$ufn} =~ /\w+/;
+      next if $ENV{$ufn};
+   }
+
+   print "\n$fieldname\:";
+   my $v = <STDIN>;
+   chomp $v;
+
+   if ( $v =~ /\!/ ) {
+      $fpairs{$fieldname} = processbang($v);
+
+      my $saved = 0;
+      until ($saved) {    # loop to save value
+         print "\n $fieldname\: Save?[Y/n]";
+         my $confirm = <STDIN>;
+         $saved++ unless ( $confirm =~ /n/i );
+         unless ($saved) {
+            print "\n$fieldname\:";
+            $v = <STDIN>;
+            chomp $v;
+            $fpairs{$fieldname} = processbang($v);
+         }
+      }
+
+   } elsif ( $v =~ /^\?/ ) {
+
+      # To implement this correctly we need to change
+      # we loop and check input until it doesn't contain
+      # a bang or a query.
+
+      $v =~ s/^\?\s*//;
+      processquery($v);
+      print "\n$fieldname\:";
+      $v = <STDIN>;
+      chomp $v;
+      $fpairs{$fieldname} = processbang($v);
+   } else {
+      $fpairs{$fieldname} = $v;
+   }
+}
+
+$T->clear();
+$T->append(%fpairs);
+
+if ( exists $OPTS{'o'} ) {
+   print "\n\n";
+   sleep 3;
+   print $T->output();
+   print "\n\n";
+} else {
+   open( TF, ">$writefile" ) || die("unable to write $writefile");
+   print TF $T->output();
+   close(TF);
+   print "\nComplete!\n";
+   sleep 1;
+}
+
+sub processbang { # allow commands
+   my $v = shift;       # value from STDIN
+   my $commentcheck;    #
+   my $preamble = $v;   # we can include stuff before the bang
+   my $command  = $v;   # the command to be issued
+   my $cv;              # the value returned from the execution of the command
+
+   # escapes should be added here
+   $preamble =~ s/\!.*//;
+   $command =~ s/^.*\!//;
+   open( CM, "$command |" ) || warn("unable to process command $c");
+   while (<CM>) { $cv .= $_; }
+   close(CM);
+
+   $cv =~ s/^/$preamble/;
+
+   print( "\nIMPORTING:\n___________________________________________________\n", $cv, "\n___________________________________________________\n" );
+
+   return $cv;
+}
+
+sub processquery {
+}
+
+sub dohelp { # 
+   while (<DATA>) { print $_ ; }
+   exit;
+}
+
+__DATA__
+
+runtemplate: process a template based on the Base::T class
+
+runtemplate -t <templatemodule> -f <writefile> -i
+
+-t <templatemodule> can be a filename, or the class name. 
+-f <writefile> the file to be created. 
+-o print to stdout 
+-i ignore environment variables. 
+
+   By default runtemplate checks uppercase environment variables 
+   against field names and substitutes them. -i disables this 
+   feature.  
+
+   questions may receive input from programs by using "! command"
+
+

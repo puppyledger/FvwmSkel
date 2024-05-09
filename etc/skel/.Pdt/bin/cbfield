@@ -1,0 +1,44 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-40-35.EDT';
+
+#: prints the list of fields in the currently edited template class.
+
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use Pdt::Bonk;
+use strict;
+
+$::_BONK = 1;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+# local $SIG{__WARN__} = sub {};
+
+# the name of the executable is used in the template
+
+my @Eclass = env2class();       # get the list of classes to process Pdt::SourceEnv
+my $OUTFH  = rtfnorstdout();    # get a writable filehandle Pdt::Sourceenv
+my $tclass = $Eclass[ 0 ];      # the template we are editing
+
+my $T;                          # The template
+my @f;                          # the fields
+
+# print $OUTFH $tclass ;
+
+my $tblock = 'use ' . $tclass . '; ' . '$T = ' . $tclass . '->new(); @f = $T->fields();';    #
+eval($tblock);
+Bonk $@ if $@;
+Bonk "No fields present?" unless scalar(@f);
+print $OUTFH ( join ' ', nsort(@f) );
+
+die if $@;
+die unless scalar(@f);
+

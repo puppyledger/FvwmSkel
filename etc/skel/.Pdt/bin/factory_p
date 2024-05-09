@@ -1,0 +1,270 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-43-38.EDT';
+
+#:
+#: :F p
+#:
+#: Plurolith factory primitive. Reads all neighbor
+#: package headers and builds accessor methods and
+#: properties for all of those classes.
+#:
+#: It returns a container to all objects in
+#: the local tree. Factories are typically only ever
+#: called once, at the beginning of the program,
+#: and are not called directly, but by constructing
+#: a root primitive class (P: r) that returns the
+#: factory instead of itself at constructor time.
+#:
+#: Factory code is generated fully automatically, but
+#: ignores packages with the flag "# EXPORTONLY" on
+#: the package line. Typically you simply delete the
+#: whole  contents of this file, and rerun (F: p)
+#: when new packages are added to your API.
+#:
+#: So:   Foo.pm # root primitive class (P: r) from which
+#:                Foo::<anything> may inherit methods.
+#:
+#:       Foo/Factory.pm # (F: a) API main accessor class
+#:       Foo->new() returns Foo::Factory.
+#:       Foo/Baz.pm  # plurolith primitive class. (P: o)
+#:       Foo->new() ; # hands back Foo::Factory,
+#:          which contains method baz(),
+#:             which provides object Foo::Baz
+#:
+
+use Cwd;
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use Pdt::Factory_P;    # for autholith classes
+use Pdt::Bonk qw(:all);
+
+use strict;
+
+system("clear");
+setbonk(1);            # turn on/off bonk debugging
+
+# local $SIG{__WARN__} = sub { };    # turn off debugging period, including warns.
+
+print "full factory classname:";
+my $fcn = <STDIN>;
+chomp $fcn;
+
+print "class constructor method:";
+my $cm = <STDIN>;
+chomp $cm;
+
+# experimental named constructor.
+
+my $ncn = $cm;
+$ncn = 'sub ' . $ncn . ' { # construct a plurolith by name';
+
+my @ft        = split( '::', $fcn );        # factory classname tokenized
+my $flt       = pop @ft;                    # factory classname last token
+my $pdtal     = $ENV{'PDT_LIB_PATH'};       # the current project library base path
+my @alt       = split( /\//, $pdtal );      # active lib tokenized
+my $searchdir = join '/', ( @alt, @ft );    # the directory of the class we are editing.
+
+# Bonk $searchdir ;
+
+unless ( -d $searchdir ) {
+   Bonk("unable to search: $searchdir");
+   exit;
+}
+
+# get the output filehandle
+
+my $OUTFH = rtfnorstdout();                 # Pdt::SourceEnv
+
+# get the comparison filename of the currently edited file, from our class
+
+my $cfn = class2fn($fcn);                   # get the filename for the currently edited class
+
+# Bonk $cfn ;
+
+unless ( -e $cfn ) {                        #
+   bonk("$cfn does not appear to exist.");
+   Bonk("Check your package line or write the file before proceeding.");
+   exit;
+}
+
+$cfn =~ s/^.*\///;                          # truncate the directory from the comparison filename
+
+# get all the packages
+
+opendir( SD, $searchdir );
+my @cl = readdir(SD);                       # class list
+close(SD);
+
+my @pl;                                     # package list
+
+for ( my $n = 0 ; $n < scalar(@cl) ; $n++ ) {
+
+   my $fqfn = $searchdir . '/' . $cl[ $n ];    # fully qualify filename
+
+   unless ( $cl[ $n ] =~ /\.pm$/ ) {           # we don't process non packages
+      splice( @cl, $n, 1 );
+      $n--;
+      next;
+   } elsif ( $cl[ $n ] =~ /^\./ ) {            # we don't process hidden files
+      splice( @cl, $n, 1 );
+      $n--;
+      next;
+   } elsif ( $cl[ $n ] eq $cfn ) {             # we don't process, if it is the file we are currently writing to
+      splice( @cl, $n, 1 );
+      $n--;
+      next;
+   } elsif ( -d $fqfn ) {                      # we don't process directories
+      splice( @cl, $n, 1 );
+      $n--;
+      next;
+   }
+
+   my $noexporter = 1;                         # disable packages with EXPORTER labels
+   my $p = seepack( $fqfn, $noexporter );      # get the package of the .pm file
+
+   unless ( length($p) ) {
+      splice( @cl, $n, 1 );
+      $n--;
+      next;
+   } elsif ( $p eq $fcn ) {                    # double check that the class doesn't match the current edited file
+      splice( @cl, $n, 1 );
+      $n--;
+      next;
+   }
+
+   push @pl, $p;
+}
+
+@pl = nsort(@pl);
+
+my @usestatements = usestatement(@pl);
+my $_usestatements = join "", @usestatements;
+
+my @initstatements = initautolith(@pl);
+my $_initstatements = join "", @initstatements;
+
+my @callbackstatements = docbmap(@pl);
+my $_callbackstatements = join "", @callbackstatements;
+
+my @accessors = simpleaccessor(@pl);
+my $_accessors = join "", @accessors;
+
+my @aoaccessors = aoaccessor(@pl);
+my $_aoaccessors = join "", @aoaccessors;
+
+my $FM = Pdt::Factory_P->new(
+   'factoryclassname'    => $fcn,
+   'usestatements'       => $_usestatements,
+   'initstatements'      => $_initstatements,
+   'callbackstatements'  => $_callbackstatements,
+   'accessorstatements'  => $_accessors,
+   'allobjectstatements' => $_aoaccessors,
+   'namedconstructor'    => $ncn
+);
+
+print $OUTFH $FM->output();
+
+sub simpleaccessor { # make accessor methods (will work regardless)
+   my @pl = @_;
+   my @cb = ();
+   for ( my $n = 0 ; $n < scalar(@pl) ; $n++ ) {
+      my $workingclass = $pl[ $n ];
+      $workingclass =~ s/^.*\:\://g;
+      $workingclass =~ tr/A-Z/a-z/;
+      $cb[ $n ] = "\n" . 'sub ' . $workingclass . ' { my $self = shift; return(' . $pl[ $n ] . '->' . $cm . '(@_)) ; }';
+   }
+   push @cb, "\n";
+   unshift @cb, "\n";
+   return @cb;
+}
+
+sub aoaccessor { # 
+   my @pl = @_;
+   my @cb = ();
+   for ( my $n = 0 ; $n < scalar(@pl) ; $n++ ) {
+      my $workingclass = $pl[ $n ];
+      $workingclass =~ s/^.*\:\://g;
+      $workingclass =~ tr/A-Z/a-z/;
+      $cb[ $n ] = "\n\t" . '$O{\'' . $workingclass . '\'} =  $self->' . $workingclass . '();';
+   }
+   push @cb, "\n";
+   unshift @cb, "\n";
+   return @cb;
+}
+
+sub initautolith { # autolith type classes may typically be cosntructed at initialization time
+   my @pl = @_;
+   my @cb = ();
+   for ( my $n = 0 ; $n < scalar(@pl) ; $n++ ) {
+      $cb[ $n ] = "\n\t\t" . '$object = ' . $pl[ $n ] . '->' . $cm . '(@_);';
+   }
+   push @cb, "\n";
+   unshift @cb, "\n";
+   return @cb;
+}
+
+sub usestatement { # creates a block of use statements.
+   my @pl = @_;
+   my @cb = ();
+   for ( my $n = 0 ; $n < scalar(@pl) ; $n++ ) {
+      $cb[ $n ] = 'use ' . $pl[ $n ] . ';';
+   }
+   push @cb, "\n";
+   unshift @cb, "\n";
+   return @cb;
+}
+
+sub docbmap { # this is a cut and paste from cbmap
+   my @pl = @_;
+
+   my $n = 0;
+   foreach (@pl) {
+      $pl[ $n ] =~ s/^.*\:\://g;
+      $pl[ $n ] =~ tr/A-Z/a-z/;
+      $n++;
+   }
+
+   my @mlist    = @pl;
+   my $mapname  = 'cbmap';
+   my $execname = 'cbmap';
+   my @mapstatement;
+   my %COLLISION;
+
+   # this is a cut and paste out of cbmap
+
+   foreach (@mlist) {
+      next if $_ =~ /^new/;         # ignore constructors
+      next if $_ =~ /^cb/;          # specific to the CB class. cb's are API exports.
+      next if $_ =~ /^callback/;    # same as above
+      next if $_ =~ /^do/;          # do's are local
+      next if $_ =~ /^_/;           # _'s are private
+      chomp;
+
+      my $checkvalue = $_;          # make a copy for collision checking.
+
+      my $foo = '$self->{\'' . $mapname . '\'}->{\'' . $_ . '\'} = sub { shift ; return $self->' . $_ . '(@_) ; }' . ';';
+
+      # flag to avoid duplicates.
+
+      push( @mapstatement, $foo ) unless $COLLISION{$checkvalue};
+      $COLLISION{$checkvalue} = 1;
+
+   }
+
+   @mapstatement = nsort(@mapstatement);
+   my $bar = join "\n\t", @mapstatement;
+
+   my $doc = Pdt::Cbmap->new();    # the template
+
+   $doc->append(
+      'execname'     => $execname,
+      'mapname'      => $mapname,
+      'mapstatement' => $bar
+   );
+
+   return $doc->output();
+}
+

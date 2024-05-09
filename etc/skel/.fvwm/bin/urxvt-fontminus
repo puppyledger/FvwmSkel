@@ -1,0 +1,4 @@
+#! /bin/bash
+		
+FvwmCommand "Current FakeKeypress modifiers 6 press KP_Subtract"  
+

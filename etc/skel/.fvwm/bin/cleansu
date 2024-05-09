@@ -1,0 +1,7 @@
+#! /bin/bash
+
+# set a minimal environment, retaining terminal settings and change to a user. 
+
+export THISTERM=$TERM
+env -i bash -l -c "printenv; export TERM=$THISTERM ; su $1" 
+

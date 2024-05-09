@@ -1,0 +1,22 @@
+
+# See: http://www.fvwm.org/documentation/manpages/unstable/FvwmEvent.php
+
+# NOTE: don't do anything that creates a new window with focus_change, because 
+# it cascades uncontrollably. 
+
+# ON FOCUS CHANGE  (diagnostic) 
+*FvwmEvent: Cmd Exec
+*FvwmEvent: focus_change "echo focuschange >> /home/x1/.fvwm/log/fvwmevent.log"
+
+# NEW WINDOWS GET FOCUS 
+*FvwmEvent-NewWindow: StartDelay 4
+*FvwmEvent-NewWindow: add_window FuncFocusWindow
+
+# demonstration code for a move-and-focus by window name 
+
+DestroyFunc FuncFocusWindow
+AddToFunc   FuncFocusWindow
++ I ThisWindow ("FOO") Move 100p 100p # This works so: (xterm -title "FOO")
++ I Focus
++ I WarpToWindow 50 5 
+

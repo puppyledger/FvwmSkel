@@ -1,0 +1,51 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-56-18.EDT';
+
+# subdiff: This will eventually be a tool for diffing two specific perl subroutines
+# in two different perl programs.
+
+die("usage: ddiff <file1> <file2>") unless scalar( @ARGV eq 2 );
+
+my $fn1 = shift @ARGV;
+chomp $fn1;
+die("$fn1 not readable") unless ( -r $fn1 );
+my $fn2 = shift @ARGV;
+chomp $fn2;
+die("$fn1 not readable") unless ( -r $fn2 );
+
+my $rtfn1 = `rtfn`;
+my $rtfn2 = `rtfn`;
+
+open( FN1,   "$fn1" )    || die;
+open( RTFN1, ">$rtfn1" ) || die;
+open( FN2,   "$fn2" )    || die;
+open( RTFN2, ">$rtfn2" ) || die;
+
+while (<FN1>) {
+   $_ = filter($_);
+   print RTFN1 $_;
+}
+
+while (<FN2>) {
+   $_ = filter($_);
+   print RTFN2 $_;
+}
+
+close(FN1);
+close(RTFN1);
+
+close(FN2);
+close(RTFN2);
+
+open( DIFF, "diff -ywB $rtfn1 $rtfn2 |" );
+
+while (<DIFF>) {
+   print $_ ;
+}
+
+sub filter { # modify as appropriate
+   $_[ 0 ] =~ s/\#.*$//g;
+   return $_[ 0 ];
+}
+

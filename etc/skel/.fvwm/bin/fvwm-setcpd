@@ -1,0 +1,13 @@
+#! /home/x1/.fvwm/bin/perl
+
+open (OLDCPD, "fvwm-getenv CPD |") ; 
+my $oldcpd = readline(OLDCPD) ; 
+close (OLDCPD) ;
+chomp $oldcpd ; 
+
+open (NEWCPD, "fvwm-pathentry -p $oldcpd |")  ; 
+my $newcpd = readline(NEWCPD) ; 
+close NEWCPD ; 
+
+system("fvwm-setenv CPD $newcpd") if $newcpd =~ /\w+/ ; 
+

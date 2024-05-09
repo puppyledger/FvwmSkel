@@ -1,0 +1,85 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-49-49.EDT';
+
+#: list the methods in a class
+
+use Getopt::Std;    # CLI options
+use Sort::Naturally qw(nsort);
+
+my %OPTS;
+getopts( 'f:o:cuxa', \%OPTS );
+
+if ( defined( $OPTS{'o'} ) ) {    # o for 'object', this mode assumes comments are desired, as it is used primarily for searching out methods
+   my $localclass = $OPTS{'o'};
+   my $localpath  = $ENV{'PERL5LIB'};
+   $localpath =~ s/\:.*//g;
+   $localpath =~ s/[\s\/\n]+$//g;
+   $localclass =~ s/\:\:/\//g;
+   $OPTS{'f'} = $localpath . '/' . $localclass . '.pm';
+   warn $OPTS{'f'};
+   $OPTS{'c'} = 1;
+}
+
+my $fn             = $OPTS{'f'};    # the file we will embed
+my $enablecomments = $OPTS{'c'};
+my $enableuc       = $OPTS{'u'};
+
+die('usage: lsmethod -f <filename> -c includecomments OR -u capitalize first letter OR -x format for exporting OR -a format as API framework')
+  unless defined $fn;
+
+open( FN, $fn );
+my $line = readline(FN) || die( "$fn", '... going blind are we?' );
+close(FN);
+
+$line =~ s/^\s*package\s*//;
+$line =~ s/\#.*$//;                 # remove comments
+$line =~ s/\;.*/\;/g;               # removed crammed perl
+my $class = $line;                  # Store the class name
+$class =~ s/\;//;                   #
+
+open( FN, "$fn" ) || die("unable to open $fn");
+
+print "\n" . '#########################################################' . "\n" . '# FILE: ' . $fn . "\n" . '# CLASS: ' . $class if defined $OPTS{'c'};
+
+while (<FN>) {
+   if ( $_ =~ /^\#\:/ && defined $OPTS{'c'} ) {
+      $_ =~ s/:/ DESCRIPTION:/;
+      print $_ ;
+      next;
+   }
+   if ( $_ =~ /^sub/ ) {
+      chomp;
+      my $comment = $_;
+      my $method  = $_;
+      $comment =~ s/^.*\#/\t\#/;
+      $comment = "" unless $comment =~ /\#/;
+      $method =~ s/sub\s+(\w+)\s*\{.*/$1/;
+
+      if ( defined $OPTS{'c'} ) {
+         format prettyprint = 
+@<<<<<<<<<<<<<<<<< @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< @<
+$method, $comment, "\n"
+.
+
+         local $~ = "prettyprint";
+         write;
+      } elsif ( defined $OPTS{'u'} ) {
+         $method =~ s/\b(\w)/\u$1/;
+         print $method ;
+         print "\n";
+      } elsif ( defined $OPTS{'x'} ) {
+         print $method . " ";
+      } elsif ( defined $OPTS{'a'} ) {
+         $comment =~ s/^\s+//g;
+         my $m = 'sub ' . $method . ' { ' . $comment . "\n" . '}' . "\n\n";
+
+         print $m ;
+      } else {
+         print $method ;
+         print "\n";
+      }
+   }
+}
+

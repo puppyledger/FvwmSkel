@@ -1,0 +1,19 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-50-47.EDT';
+
+use strict;
+
+print "\nThe following questions will be used to setup a git in:\n $ENV{'PDT_ACTIVE'}";
+
+print "Username [$ENV{'USER'}]:";
+my $user = <STDIN>;
+chomp $user;
+$user = $ENV{'USER'} unless length($user);
+
+print "Email Address: [$ENV{'USER'}\@$ENV{'HOST'}]:";
+my $email = <STDIN>;
+chomp $email;
+$email = $ENV{'USER'} \@$ENV{'HOST'} unless length($email);
+

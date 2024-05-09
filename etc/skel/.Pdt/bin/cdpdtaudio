@@ -1,0 +1,10 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-41-47.EDT'
+
+# this is eval'd into our environment as an alias statement. 
+
+source $HOME/.pdtrc
+echo "cd $PDT_ROOT/$PDT_ACTIVE/Audio"
+

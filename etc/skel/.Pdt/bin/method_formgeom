@@ -1,0 +1,324 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-47-47.EDT';
+
+#: method_formmap: creates character map functions for simple text forms.
+#: if template fields following the custom: <name>_<leftoffset>_<linenum>_<charwidth>
+#: then this program will generate the dimensions of the form, a table of
+#: parameters called the CHARMAP, and shortcult alias functions. Typically
+#: this is followed by created a cbmap for all functions, which allows the
+#: functions and maps to be tested for.
+
+use Sort::Naturally qw(nsort);
+use Pdt::Method_AliasProp;
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use Pdt::Bonk qw(:all);
+use Pdt::Method_FormMap;
+
+use Data::Dumper qw(Dumper);
+$Data::Dumper::Maxdepth = 5;
+$Data::Dumper::Purity   = 1;    # required for getting full transliteration.
+
+use strict;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+# local $SIG{__WARN__} = sub {};
+
+# the name of the executable is used in the template
+
+my $OUTFH = rtfnorstdout();    # get a writable filehandle Pdt::Sourceenv
+
+my $tclass = $ENV{'PDT_EDIT_CLASS'};    # the template we are editing
+$tclass = $ARGV[ 0 ] unless length($tclass);
+chomp $tclass;
+
+my $MFM = Pdt::Method_FormMap->new();    # external helper functions
+my $T;                                   # The template
+my @field;                               # the fields
+
+my $tblock = 'use ' . $tclass . '; ' . '$T = ' . $tclass . '->new(); @field = $T->fields();';    #
+eval($tblock);
+
+# warn "FIELDS: ", (join "\n\t", @field), " ", scalar(@field) ;
+
+### TEST
+
+if ( length($@) ) {
+   dbonk $tblock ;
+   dbonk $@ if $@;
+   dbonk
+"\n\nError: the class you are editing does not currently compile.\nDid you :w the file? Otherwise check perl -e <Class> to detect\nruntime errors in the template.\n\nYou may also see this error if you aren't editing from vimod.\n\n";
+   my $nothing = <STDIN>;
+   exit;
+}
+
+unless ( scalar(@field) ) {
+   Bonk "No fields present?";
+   exit;
+}
+
+my $clltoken = $tclass;    # class last token
+$clltoken =~ s/^.*\:\://g;
+
+my $thisformname = $clltoken;    # becomes to the FORMNAME property
+
+$clltoken =~ tr/A-Z/a-z/;
+
+#
+### PROPERTY TABLE
+
+# form template field names are formatted as: name_type_coloffset_rowoffset_length,
+# here we parse that into a table providing the neccessary information for terminal
+# writing. This creates a data structure of statics that is then passed to dumper
+# to generate the code.
+
+my %ftable;                      # container
+my $_n = 0;
+
+foreach my $f (@field) {         #
+
+   my $k = $f;
+   $k =~ s/\_.*//g;
+
+   $ftable{$k} = {};
+   ( $ftable{$k}->{'fname'}, $ftable{$k}->{'ftype'}, $ftable{$k}->{'fcoloffset'}, $ftable{$k}->{'frowoffset'}, $ftable{$k}->{'flength'} ) = split( /\_/, $f );
+
+   $ftable{$k}->{'fselected'}  = 0;     # bool field is currently selected
+   $ftable{$k}->{'fcuroffset'} = 0;     # if currently selected the last character offset
+   $ftable{$k}->{'ffullname'}  = $f;    # full unglobbed name for the field
+
+# deprecated. This created random field orders, and is replaced with refocusorder() ;
+
+#    $ftable{$k}->{'ffocusorder'} = $_n;
+
+   $ftable{$k}->{'ftext'} = $MFM->makeftext($f);
+
+#   $ftable{$k}->{'ffocus'} = 0;                                             # fields know if they are in focus,
+#   $ftable{$k}->{'ffocus'} = 1 if ( $ftable{$k}->{'ffocusorder'} == 0 );    # first field gets initial focus
+
+   $ftable{$k}->{'fecho'}    = 1;        # characters typed in field echo
+   $ftable{$k}->{'fdisable'} = 0;        # field disable flag
+   $ftable{$k}->{'fvalue'}   = undef;    # should be a reference to the property in the template
+
+   $_n++;
+}
+
+# warn "KEYS: ", scalar(keys(%ftable)), "\n",  (join "\n\t", (keys(%ftable))) ;
+
+&refocusorder;
+
+sub refocusorder { # predict widget focus order by row/col
+   my $twodee = [];
+
+   foreach my $w ( keys(%ftable) ) {
+
+      my $col = $ftable{$w}->{'fcoloffset'};
+      my $row = $ftable{$w}->{'frowoffset'};
+
+      $twodee->[ $row ] = [];
+      $twodee->[ $row ]->[ $col ] = $w;
+
+      # sleep 1;
+      # warn "$row $col $w $twodee->[$row]->[$col]" ;
+   }
+
+   my $focuscount = 0;
+
+   for ( my $n = 0 ; $n <= $#{$twodee} ; $n++ ) {
+      for ( my $N = 0 ; $N <= $#{ $twodee->[ $n ] } ; $N++ ) {
+         if ( length( $twodee->[ $n ]->[ $N ] ) ) {
+            my $w = $twodee->[ $n ]->[ $N ];
+
+            # warn "$n $N $w" ; sleep 3;
+
+            $ftable{$w}->{'ffocusorder'} = $focuscount;
+            $ftable{$w}->{'ffocus'}      = 0;
+            $ftable{$w}->{'ffocus'}      = 1 if ( $ftable{$w}->{'ffocusorder'} == 0 );
+            $focuscount++;
+         }
+      }
+   }
+
+   # sleep 2;
+}
+
+# warn "AFTER REFOCUS KEYS: ", scalar(keys(%ftable)), "\n",  (join "\n\t", (keys(%ftable))) ;
+
+### WIDGET KEYMAP BINDING
+
+my $kmtext = "\n";
+
+### ALIAS FUNCTIONS
+
+# because the field names are long, We define some globs to make the short
+# names transliterate into long named properties
+
+my $aliasblock;
+my $A = Pdt::Method_AliasProp->new();
+
+my %aliasmap;    #
+
+foreach my $k ( keys %ftable ) {
+   $A->clear();
+   $A->append( 'method_name' => $ftable{$k}->{'fname'}, 'method_target' => $ftable{$k}->{'ffullname'} );
+   $aliasblock .= $A->output();
+   $aliasmap{ $ftable{$k}->{'fname'} } = $ftable{$k}->{'ffullname'};    # forwards for use by sizing block
+}
+
+### SIZE BLOCK
+
+# here will fill a hash to max size for respective fields so we
+# can create the form at full size and measure it.
+
+my %fillblock;
+
+foreach my $k ( keys(%aliasmap) ) {
+   my $flength = $ftable{$k}->{'flength'};
+   my $filltext;
+
+   for ( my $n = 0 ; $n < $flength ; $n++ ) {
+      $filltext .= '~';
+   }
+
+   $fillblock{ $ftable{$k}->{'ffullname'} } = $filltext;
+}
+
+# now we create the form at max size and measure it.
+
+$T->clear();
+$T->append(%fillblock);
+my $fulloutblock = $T->output();
+
+my $maxcol = 0;
+my $maxrow = 0;
+
+my @foba = split( "\n", $fulloutblock );
+$maxrow = scalar(@foba);
+
+foreach (@foba) {    #
+   $maxcol = ( length($_) ) if ( length($_) > $maxcol );
+}
+
+# and assemble some form level properties
+
+my $fshortname = $field[ 0 ];
+$fshortname =~ s/\_.*$//;
+my $rclasstext = &relatedclass();
+
+my $colrowblock;
+
+$colrowblock = "\n\n"
+  . '$GEOM->{"FORM"} = {};' . "\n"
+  . '$GEOM->{"FORM"}->{"FORMGROUP"} = qw['
+  . $rclasstext . '];' . "\n"
+  . '$GEOM->{"FORM"} = {};' . "\n"
+  . '$GEOM->{"FORM"}->{"NAME"}'
+  . "\= \"$thisformname\" \;\n"
+  . '$GEOM->{"FORM"}->{"FORMORDER"}'
+  . "\= 0 \;\n"
+  . '$GEOM->{"FORM"}->{"COL"}'
+  . "\= $maxcol \;\n"
+  . '$GEOM->{"FORM"}->{"ROW"}'
+  . "\= $maxrow \;" . "\n"
+  . '$GEOM->{"FORM"}->{"ALIGN"}'
+  . "\= \[\"fixed\", 0,0\] \;" . "\n"
+  . '$GEOM->{"FORM"}->{"REPLACEMODE"}'
+  . "\= 0 \;" . "\n\n";
+
+# widget can compare their short names to know if they are focused
+
+### OUTPUT
+
+my $charmap = '# (:M formmap)';
+
+# add the colrow block
+
+$charmap .= $colrowblock;
+
+# the callback header
+
+#warn scalar(keys %ftable) ;
+#sleep 5;
+
+# here we use dumper to generate all the widget
+# parameter code.
+
+my $dumpdat = Dumper \%ftable;
+
+#warn $dumpdat;
+#sleep 5;
+
+$dumpdat =~ s/VAR1/GEOM\-\>\{\'WIDGET\'\}/g;    # replace the key from dumper
+$dumpdat =~ s/\'FORMHANDLE\'/\\\$widget/g;      # replace the key from dumper
+
+$charmap .= $dumpdat;                           # add the widget table
+$charmap .= $kmtext;                            # populate the keymap table
+
+# this line converts the properties data structure into GUI forms and widgets
+
+#  $_[0]->{'GEOM'} = Pdt::Form->new( %$GEOM, 'TEMPLATE' => $_[0] ) unless ( defined $_[0]->{'GEOM'} ) ;
+
+# $charmap .= "\n" . 'sub _init { $GEOM = Pdt::Form::Frame->new(%$GEOM, \'TEMPLATE\' => $_[0]) ; }' . "\n\n";
+
+# $charmap .= "\n" . 'sub GEOM { return ($GEOM) ; }' . "\n\n";
+
+# these are subs to alias short names to long ones
+
+$charmap .= $aliasblock . "\n";
+
+print $OUTFH $charmap;
+
+exit;
+
+sub relatedclass {
+   my $prefix = $ENV{'PDT_EDIT_CLASS'};
+   chomp $prefix;
+   $prefix = &relatedroot($prefix);
+
+   open( LSLIB, "lspack $prefix |" ) || die $@;
+   my $text;
+
+   while (<LSLIB>) {
+      next unless ( $_ =~ /use/ );
+      chomp $_;
+      $_ =~ s/^use\s+//;
+      $_ =~ s/\s*\;\s*$//;
+      my @foo = split(/\:\:/);
+      $text .= pop(@foo);
+      $text .= " ";
+   }
+
+   $text =~ s/\s+$//g;
+
+   # the related frames list is lc, because that is the key
+   # to get the object from the factory.
+
+   $text =~ tr/A-Z/a-z/;
+
+   close(LSLIB);
+   return ($text);
+}
+
+sub relatedroot { # my $class = shift;
+   my $class = shift;
+
+   # if the last class token is underscore deliniated,
+   # we want only the first string, which will represent
+   # the root of the related classes.
+
+   my @ctok = split( /\:\:/, $class );
+   my @utok = split( /_/,    $ctok[ $#ctok ] );
+   $ctok[ $#ctok ] = $utok[ 0 ];
+   $class = join '::', @ctok;
+
+   return $class;
+}
+

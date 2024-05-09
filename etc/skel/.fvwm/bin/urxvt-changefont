@@ -1,0 +1,14 @@
+#! /Skel/bin/perl
+
+use strict ; 
+
+die ("\nusage: urxvt-changefont <fontname> \# see xlsfonts for a list") unless (length($ARGV[0])) ; 
+
+my $string2 = $ARGV[0] ; 
+chomp $string2 ; 
+
+my $string1 = join "", (chr(27), chr(93)) ; 
+my $string3 = chr(7) ; 
+my $block = sprintf ('%s50;%s%s', ($string1, $string2, $string3)) ; 
+
+print $block  ; 

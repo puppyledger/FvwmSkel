@@ -1,0 +1,82 @@
+#! /usr/bin/perl
+
+# take a list of strings and make a bunch of set/gets 
+
+use Pdt::Opthead ; 
+use Sort::Naturally qw(nsort);
+use Bash::Sugar; 
+
+# use Pdt::Cbmap; # now loaded by eval
+
+use strict;
+
+### input options (-f <filename> || -c <classname> || <none, LASTEDITFILE defined in .vimrc>)
+
+my $BSUGAR = Bash::Sugar->new(); 
+$BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+
+my $_DEBUG = 0 ; 
+my $OH = Pdt::Opthead->new($_DEBUG) ; 
+my ($efn,$ecl,$tfn) = $OH->opthead1() ; # edit file, edit class, temp edit file 
+
+### generate the template class from the executable name (symlink polymorphism)
+
+my $execname = $0;
+chomp $execname  ;
+$execname =~ s/^.*\///g;
+my ($ltok,$rtok) = split(/\_/,$execname) ; 
+$ltok = $BSUGAR->capstr($ltok) ;
+$rtok = $BSUGAR->capstr($rtok) ;
+my $templatename = 'Pdt::' . $ltok . '_' . $rtok ; 
+my $templatestr = "use $templatename \;" ; 
+eval($templatestr) ; 
+
+if ($@) { warn $@ ; sleep 3 ; die ; }
+
+if ($_DEBUG) { warn "exename: $execname" ; sleep 1 ; }
+if ($_DEBUG) { warn "efn: $efn" ; sleep 1 ; }
+if ($_DEBUG) { warn "ecl: $ecl" ; sleep 1 ; }
+if ($_DEBUG) { warn "template: $templatestr" ; sleep 1 ; }
+
+### Create the template
+
+my $F ; 
+my $templatehandlestr = '$F = $templatename->new();' ; 
+eval($templatehandlestr) ; 
+
+if ($@) { warn $@ ; sleep 3 ; die ; }
+
+if ($_DEBUG) { warn "$templatehandlestr: $F" ; sleep 1 ; }
+
+### Generate a temp file
+
+open (RTFN,">$tfn") if (length($tfn)) ; 
+
+my @M = @ARGV;
+@M = nsort(@M);
+
+chomp( $M[ $#M ] ) if scalar(@M);
+
+foreach my $n (@M) {    #
+   $F->clear();
+
+	# these are the only lines different from method_setget. 
+	# they define a direct call to a method defined in the 
+	# template itself. Nothing fancy. 
+
+	my $u = $F->uc_name($n) ; 
+   $F->append( 'method_name' => $n, 'uc_name' => $u);
+
+	# 
+
+	if (length($tfn)) {
+   	print RTFN $F->output();
+	} else {	
+		print $F->output() ; 
+	}
+}
+
+if ($_DEBUG) { warn "complete." ; sleep 3 ; }
+
+close(RTFN);
+

@@ -1,0 +1,44 @@
+# here we define the iconbox. Since we typically tile windows 
+# topleft to bottomright with the pager in the top right corner, 
+# icons should form a bar across the top of the screen from 
+# right to left. This will make the most recently stacked icon 
+# the least likely to be covered by a current window. Sticky 
+# icons gives us an additional relational dimension, and 
+# allows repaging a window without going to the mouse by 
+# combining iconification with the windows key, and 
+# window swapping with the number pad
+
+Style * StickyIcon
+Style * IconTitleRelief 0
+Style * IconBackgroundRelief 0
+Style * IconBackgroundPadding 0
+# Style * IconBox $[ICONBOX_GEOMETRY], IconGrid 3 3
+Style * IconBox screen w 15 15 -165 -15, IconGrid 1 1, IconFill top right
+
+# Style "*Writer*" Icon $[XICONPATH]/white/print.png
+
+# See http://www.fvwm.org/generated/icon_shots/mini1.gif for a list
+
+# icon management is a work in progress and probably requires some 
+# fancy build options for fvwm to be fully implemented. These 
+# icons are set up in the file $SKEL/.iconmap which is just 
+# bulk environment variable interpolation sourced by .bashrc. 
+# The purpose of this is to allow users to diddle their own 
+# icons without touching fvwm. 
+
+Style "xcalc"  Icon $./Icons/mini.calc.xpm
+# Style "XMMS*"	IconOveride $[ICON_MUSIC]
+
+# Local xterms are textured
+# Style "/*"		Icon $[ICON_XTERM1] 
+
+# Foreign xterms are black 
+# Style "\*/*"	Icon $[ICON_XTERM2]
+
+# Local edits are green
+# Style "*::*"	Icon $[ICON_XTERM3]
+
+# Foreign edits are red
+# Style "\**::*"	Icon $[ICON_XTERM4]
+
+

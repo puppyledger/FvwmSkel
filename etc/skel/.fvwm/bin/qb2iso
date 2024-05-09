@@ -1,0 +1,203 @@
+#! /bin/perl
+
+#: Backups are done using a 2 dimensional method. 
+#: Backups default write to /Backup/$HOST/$dir|$filename.time.tar.gz 
+#: in this fashion, all hosts, backup locally, and all host 
+#: backups can rsync to the backup spool without collision
+#: This script will try and make backup directories if they 
+#: do not exist. 
+
+use Cwd ;
+use Getopt::Std ;
+
+use strict;
+
+my $VERSION = '1.0' ; 
+
+my %OPTS ;
+getopts("n:p:d:c:ibhf", \%OPTS) ;
+
+&dohelp if $OPTS{'h'} ; 
+
+my $T  ; # time
+my $P  ; # path
+my $N  ; # hostname 
+my $D  ; # target directory
+my $I	 ; # create an iso 
+my $IU ; # container for user name extended path 
+
+my $isofn = undef ; # the name of the iso to burn (automatic) 
+my $burnflag = 0  ; # burn the iso 
+
+$T = `date +%F\.%H\-%M\-%S\.%Z` ; # TIME
+chomp $T ; 
+
+$N = gethostname() unless defined $OPTS{'n'} ;	# HOSTNAME
+$N = $OPTS{'n'} if defined $OPTS{'n'} ; 
+chomp $N  ; 
+$N =~ s/\/\s*$//g ; 
+$N .= '/' ; 
+
+$P = '/Backup' ; 			# PATH
+$P = $OPTS{'p'} if defined $OPTS{'p'} ; 
+chomp $P ; 
+$P =~ s/\/\s*$//g ; 
+$P .= '/' ; 
+
+# This is just a path, the filename will be the same as 
+# the target file, except with an iso extension attached. 
+
+$I = $P . 'ISO' ; 
+$IU = $I . '/' . $ENV{'USER'} ; 
+
+$D = $OPTS{'d'} ; 			# TARGET
+chomp $D ; 
+$D =~ s/\/\s*$//g ; # can parse "dir/"
+die ('-d <file|directory> required.') unless $D =~ /\w+/ ; 
+die ('target not readable') unless -r $D ; 
+
+unless ($D =~ /^\//) { # Fully qualify target 
+	my $d = cwd()  ; 
+	$d =~ s/\/$//g ; 
+	$d .= '/'      ; 
+	$D = $d . $D   ; 
+}
+
+mkunless($P) ; # /Backup/
+$P .= $N     ; #  
+mkunless($P) ; # /Backup/Hostname/ 
+
+warn $I ; 
+mkunless($I) if $OPTS{'i'} ; 
+
+warn $IU ; 
+mkunless($IU) if $OPTS{'i'} ; 
+
+sub mkunless { # Make backup paths that don't exist
+	my $p = shift ; 
+	$p =~ s/\/$//g; 
+	unless (-d $p) { # If no backup directory exists, offer to create one 
+		print "$p does not exist. Create? [y/N]" ; 
+		my $confirm = <STDIN> ; 
+		die('quitting')  unless $confirm =~ /y/i ; 
+		`mkdir $p` ; 
+	}
+}
+
+# if we can't write, complain. 
+my $p = $P ; 
+my $i = $IU ; 
+
+chop $p ; 
+die ("$p invalid path") unless -d $p  ;
+
+if ($OPTS{'i'}) {
+	die ("$i not writable") unless -w $i ; 
+}
+
+# create a filename for backing up
+my $fn = $D ; 
+
+$fn =~ s/\\\s+/\_/g ;# escaped whitespace becomes '_'
+$fn =~ s/\s+/\_/g  ; # whitespace and escaped whitespace becomes '_'
+$fn =~ s/\W+/\./g  ; # all nonword characters become '.'
+$fn =~ s/^\.//     ; # no beginning dot
+$fn =~ s/\.\./\./g ; # no duplicate dots 
+
+$isofn = $I . '/' . $fn . '.' . $T . '.tar.gz.iso' ;  
+$fn = $P . $fn . '.' . $T . '.tar.gz' ; 
+
+print "\nCreating:\t$fn" ; 
+print "\nCreating: \t$isofn" if $OPTS{'i'} ; 
+print "\n Burning: \t$isofn" if $OPTS{'b'} ; 
+print "\n"  ; 
+print "From:  \t$D\n\n" ; 
+
+unless (defined $OPTS{'f'}) { # offer a way out 
+	print "confirm [Y/n]" ; 
+	my $input = <STDIN>   ; 
+	die ('quitting.') if $input =~ /n/i ; 
+	print "\nShort Description:" ; 
+	$OPTS{'c'} = <STDIN> ; 
+	print "\n" ; 
+}
+
+print "backgrounding.\n" ; 
+
+my $C = 'tar -z -cf ' .  $fn .  ' ' . $D  ; 
+
+system($C) ; 
+
+print "Writing description.\n" ; 
+my $dfn = $fn . '.desc' ; 
+my $mdfn = $fn . '.md5' ; 
+
+open (DFN,">$dfn") ; 
+print DFN "$OPTS{'c'}\n" ; 
+close(DFN) ; 
+
+print "Hashing.\n" ; 
+system("md5sum $fn > $mdfn") ; 
+
+system("chown backup:backup $fn")   ; 
+system("chown backup:backup $dfn")  ; 
+system("chown backup:backup $mdfn") ; 
+
+if ($OPTS{'i'}) {
+	my $isocmd = 'genisoimage -o ' . $isofn . ' -R ' . $fn ; 
+	warn $isocmd    ; 
+	system($isocmd) ; 
+}
+
+if ($OPTS{'b'}) {
+	my $burncmd = 'wodim dev=/dev/cdrom ' . $isofn ; 
+	# warn $burncmd ; 
+	system($burncmd) ; 
+}
+
+sub gethostname { # _really_ try to get a usable hostname 
+	return $ENV{'HOSTNAME'} if $ENV{'HOSTNAME'} =~ /\w+/ ; 
+	return $ENV{'HOST'} if $ENV{'HOST'} =~ /\w+/ ;
+	open (HN,"/etc/hostname") || die ("cannot open /etc/hostname") ;  
+	my $hostname = readline(HN) ; 
+	close(HN) ; 
+	die ("no hostname?") unless $hostname =~ /\w+/ ; 
+	chomp  $hostname  ; 
+	return $hostname ; 
+}
+
+sub dohelp { # 
+        while (<DATA>) { print $_ ;  }
+        exit ; 
+}
+
+__DATA__
+
+qb is a simple backup script that uses the two dimensional 
+backup method. Backups always write to:  
+
+/Backup/$HOST/$pwd-date.tar.gz 
+/Backup/$HOST/$pwd-date.tar.gz.md5 
+/Backup/$HOST/$pwd-date.tar.gz.comment 
+
+The main backup server can then rsync the files for a 
+periodic download, leaving no risk of collision. 
+
+usage: qb -d <path> 
+
+where path may be fully qualified or relative. The backup 
+will be created. It will be hashed for later integrity 
+verification, and a comment file will be written. qb 
+will prompt for comment, unless -c or -f are used. 
+
+optionally 
+-d  <directory> (required) 
+-p  can specify a write path other than /Backup
+-n  can specificy a hostname other than $HOST 
+-f  force, (don't ask before running the backup) 
+-c  comment (provide comment on the cli) 
+-i  create an iso file
+-b  burn the iso file (requires -i) 
+
+2014-12-02 (JMA)
+

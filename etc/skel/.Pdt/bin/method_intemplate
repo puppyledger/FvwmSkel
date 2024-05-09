@@ -1,0 +1,7 @@
+#! /bin/bash 
+
+# \#
+export VERSION='2018-04-10.04-48-24.EDT'
+
+
+pdt Pdt::Method_InTemplate

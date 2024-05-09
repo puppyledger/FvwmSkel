@@ -1,0 +1,23 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-13.06-46-23.EDT';
+
+# \#
+my $VERSION = '2018-04-13.06-46-19.EDT';
+
+#: Typically utf-8 encoded web text pastes will include some utf-8
+#: garbage. This strips that, normalizes CRLF to the system for
+#: good measure. usage: cat <mydocument> | asciify > <mynewdocument>
+
+while (<STDIN>) {
+   $_ =~ s/[[:^ascii:]]/ /g;
+   print crlf($_) . "\n";
+}
+
+sub crlf {
+   my $line = shift;
+   $line =~ s/[\015\012]//g;    # strip CRLF
+   return $line;
+}
+

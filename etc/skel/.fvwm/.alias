@@ -1,0 +1,15 @@
+
+# I always forget this one 
+
+alias netstat=ss
+
+# terminal keepalive for sessions that are interferred with by
+# ISP's who time-out sessions with their shitty surveillance 
+# switches. 
+
+alias asdf="ping -i 3 127.0.0.1"
+alias hist2script="history $1 | pexp 's/^\s+\d+\s+//'"
+alias usbmount="sudo mount $1 $2 -o uid=$USER -o gid=$GROUP"     
+alias py="/Skel/bin/libreoffice5.3/program/python"
+alias vi=vim 
+

@@ -1,0 +1,28 @@
+#! /usr/bin/perl
+
+# oncd (on chdir) This program resets
+# the title bar for xterms.
+
+use Cwd;
+use strict;
+
+# term types "linux", and "vt100", may be serial
+# consoles.  We ignore them.
+
+my $userstring = shift @ARGV;
+chomp $userstring;
+
+exit unless ( $ENV{'TERM'} eq 'xterm' || $ENV{'TERM'} =~ /rxvt/);
+
+# get the current path
+
+my $d = getcwd;
+$d = $userstring if length($userstring);
+
+if ( $ENV{'HOMESTATION'} eq $ENV{'CURRENTSTATION'} ) {    # from our own workstation we show the path.
+   print "\033]2;$d\007";
+} else {                                                  # from a remote station, we show user@host -> <path>
+   my $block = $ENV{'USER'} . '@' . $ENV{'CURRENTSTATION'} . ' -> ' . $d;
+   print "\033]2;$block\007";
+}
+

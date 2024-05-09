@@ -1,0 +1,213 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-50-14.EDT';
+
+#:
+#: method_formmap: creates character map functions for simple text forms.
+#:
+#: if template fields following the custom: <name>_<leftoffset>_<linenum>_<charwidth>
+#: then this program will generate the dimensions of the form, a table of
+#: parameters called the CHARMAP, and shortcult alias functions. Typically
+#: this is followed by created a cbmap for all functions, which allows the
+#: functions and maps to be tested for.
+#:
+
+use Pdt::Method_AliasProp;
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use Pdt::Bonk qw(:all);
+use Data::Dumper qw(Dumper);
+
+use strict;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+# local $SIG{__WARN__} = sub {};
+
+# the name of the executable is used in the template
+
+my $OUTFH = rtfnorstdout();    # get a writable filehandle Pdt::Sourceenv
+
+my $tclass = $ENV{'PDT_EDIT_CLASS'};    # the template we are editing
+$tclass = $ARGV[ 0 ] unless length($tclass);
+chomp $tclass;
+
+my $T;                                  # The template
+my @field;                              # the fields
+
+my $tblock = 'use ' . $tclass . '; ' . '$T = ' . $tclass . '->new(); @field = $T->fields();';    #
+eval($tblock);
+
+### TEST
+
+if ( length($@) ) {
+   dbonk $tblock ;
+   dbonk "\n\t$tclass has to be runable for formmap to work. \n\tIf you are here, it probably is not.";
+   dbonk $@ if $@;
+   exit;
+}
+
+unless ( scalar(@field) ) {
+   Bonk "No fields present?";
+   exit;
+}
+
+my $clltoken = $tclass;    # class last token
+$clltoken =~ s/^.*\:\://g;
+
+my $thisformname = $clltoken;    # becomes to the FORMNAME property
+
+$clltoken =~ tr/A-Z/a-z/;
+
+#
+### PROPERTY TABLE
+
+# form template field names are formatted as: name_type_coloffset_rowoffset_length,
+# here we parse that into a table providing the neccessary information for terminal
+# writing. This creates a data structure of statics that is then passed to dumper
+# to generate the code.
+
+my %ftable;                      # container
+my $_n = 0;
+
+foreach my $f (@field) {         #
+
+   my $k = $f;
+   $k =~ s/\_.*//g;
+
+   $ftable{$k} = {};
+   ( $ftable{$k}->{'fname'}, $ftable{$k}->{'ftype'}, $ftable{$k}->{'fcoloffset'}, $ftable{$k}->{'frowoffset'}, $ftable{$k}->{'flength'} ) = split( /\_/, $f );
+
+   $ftable{$k}->{'fselected'}   = 0;      # bool field is currently selected
+   $ftable{$k}->{'fcuroffset'}  = 0;      # if currently selected the last character offset
+   $ftable{$k}->{'ffullname'}   = $f;     # full unglobbed name for the field
+   $ftable{$k}->{'ffocusorder'} = $_n;    # field focus order
+
+   $ftable{$k}->{'ffocus'} = 0;                                             # fields know if they are in focus,
+   $ftable{$k}->{'ffocus'} = 1 if ( $ftable{$k}->{'ffocusorder'} == 0 );    # first field gets initial focus
+
+   $ftable{$k}->{'fecho'}    = 1;                                           # characters typed in field echo
+   $ftable{$k}->{'fdisable'} = 0;                                           # field disable flag
+   $ftable{$k}->{'fvalue'}   = undef;                                       # should be a reference to the property in the template
+
+   $_n++;
+}
+
+### WIDGET KEYMAP BINDING
+
+my $kmtext = "\n";
+
+### ALIAS FUNCTIONS
+
+# because the field names are long, We define some globs to make the short
+# names transliterate into long named properties
+
+my $aliasblock;
+my $A = Pdt::Method_AliasProp->new();
+
+my %aliasmap;    #
+
+foreach my $k ( keys %ftable ) {
+   $A->clear();
+   $A->append( 'method_name' => $ftable{$k}->{'fname'}, 'method_target' => $ftable{$k}->{'ffullname'} );
+   $aliasblock .= $A->output();
+   $aliasmap{ $ftable{$k}->{'fname'} } = $ftable{$k}->{'ffullname'};    # forwards to use by sizing block
+}
+
+### SIZE BLOCK
+
+# here will fill a hash to max size for respective fields so we
+# can create the form at full size and measure it.
+
+my %fillblock;
+
+foreach my $k ( keys(%aliasmap) ) {
+   my $flength = $ftable{$k}->{'flength'};
+   my $filltext;
+
+   for ( my $n = 0 ; $n < $flength ; $n++ ) {
+      $filltext .= '~';
+   }
+
+   $fillblock{ $ftable{$k}->{'ffullname'} } = $filltext;
+}
+
+# now we create the form at max size and measure it.
+
+$T->clear();
+$T->append(%fillblock);
+my $fulloutblock = $T->output();
+
+my $maxcol = 0;
+my $maxrow = 0;
+
+my @foba = split( "\n", $fulloutblock );
+$maxrow = scalar(@foba);
+
+foreach (@foba) {    #
+   $maxcol = ( length($_) ) if ( length($_) > $maxcol );
+}
+
+# and assemble some form level properties
+
+my $fshortname = $field[ 0 ];
+$fshortname =~ s/\_.*$//;
+
+my $colrowblock;
+$colrowblock = "\n\n"
+  . 'my $widget = {};' . "\n"
+  . '$widget->{"FORM"} = {};' . "\n"
+  . '$widget->{"FORM"}->{"NAME"}'
+  . "\= \"$thisformname\" \;\n"
+  . '$widget->{"FORM"}->{"COL"}'
+  . "\= $maxcol \;\n"
+  . '$widget->{"FORM"}->{"ROW"}'
+  . "\= $maxrow \;" . "\n"
+  . '$widget->{"FORM"}->{"ALIGN"}'
+  . "\= \[\"fixed\", 0,0\] \;" . "\n"
+  . '$widget->{"FORM"}->{"REPLACEMODE"}'
+  . "\= 0 \;" . "\n\n";
+
+# widget can compare their short names to know if they are focused
+
+### OUTPUT
+
+my $charmap = 'use Pdt::Form ;';
+
+# add the colrow block
+
+$charmap .= $colrowblock;
+
+# the callback header
+
+# generate the keymap hashes and transliterate
+# the Dumper variable
+
+my $dumpdat = Dumper( \%ftable );
+$dumpdat =~ s/VAR1/widget\-\>\{\'WIDGET\'\}/g;    # replace the key from dumper
+$dumpdat =~ s/\'FORMHANDLE\'/\\\$widget/g;        # replace the key from dumper
+$charmap .= $dumpdat;                             # add the widget table
+$charmap .= $kmtext;                              # populate the keymap table
+
+# this line converts the properties data structure into GUI forms and widgets
+
+#  $_[0]->{'GEOM'} = Pdt::Form->new( %$widget, 'TEMPLATE' => $_[0] ) unless ( defined $_[0]->{'GEOM'} ) ;
+
+$charmap .= "\n"
+  . 'sub _init { # convert template data to forms and widgets' . "\n\t"
+  . '$_[0]->{\'GEOM\'} = Pdt::Form->new(%$widget, \'TEMPLATE\' => $_[0]) unless (defined $_[0]->{\'GEOM\'}) ;' . "\n\t"
+  . '# (M: keyadd) statements may go here' . "\n" . "\}" . "\n\n";
+
+# these are subs to alias short names to long ones
+
+$charmap .= $aliasblock . "\n";
+
+print $OUTFH $charmap;
+

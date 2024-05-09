@@ -1,0 +1,5 @@
+#! /bin/bash
+
+# set an fvwm environment variable from the CLI
+
+FvwmCommand "SetEnv $1 $2"

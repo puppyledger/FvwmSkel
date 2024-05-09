@@ -1,0 +1,125 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-41-26.EDT';
+
+# In a CLI interface, commands are public or escalated for
+# for show commands, and executable or escalated for actual
+# execution. We make our best guess here. Typically a single
+# word command is escalated, except where the single word matches
+# the last token in the class, in which case it is the escalation
+# command. Multi word commands are otherwise assumed to be
+# public level.
+
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbpub;
+use strict;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+local $SIG{__WARN__} = sub { };
+
+# the name of the executable is used in the template
+
+my $execname = $0;
+$execname =~ s/^.*\///g;
+
+#
+
+my $doc    = Pdt::Cbpub->new();    # the template handle
+my @Eclass = env2class();          # get the list of classes to process Pdt::SourceEnv
+my $OUTFH  = rtfnorstdout();       # get a writable filehandle Pdt::Sourceenv
+
+# avoid duplication with a collision table
+
+my %COLLISION;
+
+# the root methods always get preference, so we set them aside.
+
+my $mapname = 'cbpub';
+
+# accumulators
+
+my @mapstatement;                  # root level commands
+my @escstatement;                  # escalated commands
+
+# here we take the most specific class, which should
+# be the one we are currently editing, and create a
+# comparison token.
+
+my $rlctoken = $Eclass[ 0 ];
+chomp $rlctoken;
+$rlctoken =~ s/\s+//g;
+$rlctoken =~ s/^.*\:\://g;
+$rlctoken =~ tr/A-Z/a-z/;
+$rlctoken = '"' . $rlctoken . '",';
+
+my $n = 0;
+
+foreach my $editclass (@Eclass) {
+   chomp $editclass;
+
+   my $fn    = seefn($editclass);    # get the filename for the class
+   my @mlist = seemethod($fn);       # read thefile and get all the methods.
+
+   foreach (@mlist) {
+      next unless $_ =~ /^docmd/;    # ignore constructors
+      chomp $_;
+
+      $_ =~ s/^docmd_//;
+      $_ =~ s/\s+|\-|\_/ /g;
+      $_ = '"' . $_ . '",';
+
+      # if a token is the lower case of the most
+      # specific perl class, it is probably an
+      # escalatION command. Otherwise single token
+      # commands are assumed to be escalated
+      # and multi tokens are not. This is
+      # not perfect, but it will likely do
+      # the trick most of the time.
+
+      my $checkvalue = $_;
+
+      if ( $_ eq $rlctoken ) {
+         push @mapstatement, $_ unless $COLLISION{$checkvalue};
+      } elsif ( $_ =~ /\s+/ ) {
+         push @mapstatement, $_ unless $COLLISION{$checkvalue};
+      } else {
+         push @escstatement, $_ unless $COLLISION{$checkvalue};
+      }
+
+      # flag to avoid duplicates.
+
+      $COLLISION{$checkvalue} = 1;
+   }
+
+   $n++;
+}
+
+@mapstatement = nsort(@mapstatement);
+@escstatement = nsort(@escstatement);
+
+# root statements are typically multiple words
+# escalated statements are typically a single word
+
+my $bar = join " ", @mapstatement;
+$bar =~ s/\,$//;
+
+my $doo = join " ", @escstatement;
+$doo =~ s/\,$//;
+
+$doc->append(
+   'execname'     => $execname,
+   'mapstatement' => $bar,
+   'escstatement' => $doo
+);
+
+print $OUTFH $doc->output();
+print $OUTFH "\n";
+

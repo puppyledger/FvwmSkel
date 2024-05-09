@@ -1,0 +1,42 @@
+#! /usr/bin/perl
+
+# usage packods <odsfilename> <pythonmacroname>
+
+import zipfile
+import shutil
+import os 
+import sys 
+
+# prune previous bundle
+
+print ("Delete and create directoriy with_macro")
+shutil.rmtree("with_macro",True)
+os.mkdir("with_macro")
+
+# create a directory and copy the new bundle
+
+filename = "with_macro/"+sys.argv[1]
+macroname = "with_macro/"+sys.argv[2]
+print ("Open file" + sys.argv[1])
+print ("Open macro" + sys.argv[2])
+shutil.copyfile(sys.argv[1],filename)
+shutil.copyfile(sys.argv[2],macroname)
+
+# copy the macro into the zip file
+
+doc = zipfile.ZipFile(filename,'a')
+doc.write(macroname, "Scripts/python/"+sys.argv[2])
+
+# here we interpose a manifest line identifying the new script
+
+manifest = []
+for line in doc.open('META-INF/manifest.xml'):
+	if '</manifest:manifest>' in line.decode('utf-8'):
+		for path in ['Scripts/','Scripts/python/','Scripts/python/'+sys.argv[2]]:
+			manifest.append(' <manifest:file-entry manifest:media-type="application/binary" manifest:full-path="%s"/>' % path)
+	manifest.append(line.decode('utf-8'))
+	
+doc.writestr('META-INF/manifest.xml', ''.join(manifest))
+doc.close()
+print("File created: "+filename)
+

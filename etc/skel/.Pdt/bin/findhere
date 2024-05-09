@@ -1,0 +1,32 @@
+#! /usr/bin/perl
+
+# findhere searches a file for the string "# HERE "
+# which can be used as a day-on-day marker for 
+# work. It prints out the line number argument to 
+# a vim command, so that moving the comment tag in 
+# the document will allow it to return to the same 
+# position each time  
+
+my $fn = shift @ARGV ;
+chomp $fn ; 
+
+my $username = `whoami` ; 
+chomp $username ; 
+
+open( FN, "$fn" ) || die("unable to find HERE from: $fn");
+
+my $n = 0;
+
+while (<FN>) {
+   my $line = $_;
+   $n++;
+
+   if ( $line =~ /\#.*HERE/ ) {
+      print "\+$n";  
+		exit;
+   }
+
+}
+
+print "\+0" ; 
+

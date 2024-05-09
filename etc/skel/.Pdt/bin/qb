@@ -1,0 +1,267 @@
+#! /bin/perl 
+
+my $VERSION = '2018-04-10.04-53-54.EDT';
+
+#:
+#: 					Quick Backup
+#:
+#: 			Symultainiously backup to remote
+#:				and local media, in multi user
+#:				environments.
+#:
+#:				IOW, backups for the paranoid. IOW
+#: 			mo betta backups for peeps who've
+#: 			seen fancy backup systems burst into
+#: 			flames at inopportune moments. :-)
+#:
+
+use Cwd;
+use Getopt::Std;
+use strict;
+
+my $mkisopath    = existorbail("/usr/bin/mkisofs");     # where the iso maker is
+my $cdrecordpath = existorbail("/usr/bin/cdrecord");    # where the cd recorder is
+my $devicepath   = existorbail("/dev/cdrom");           # where the drive actually is
+my $devicemount  = existorbail("/mnt/cdrom");           # where we mount it when done
+my $md5path      = existorbail('/usr/bin/md5sum');      # where our hash function is
+my $dupath       = existorbail('/usr/bin/du');          # where du is so we can guestimate
+my $ejectpath    = existorbail('/bin/eject');           # where du is so we can guestimate
+
+my $backuppath = '/Backup';                             # our NAS or backup drive mountpoint.
+
+my %OPTS;
+getopts( "n:p:d:c:hibf", \%OPTS );
+
+&dohelp if ( defined $OPTS{'h'} );                      # print help message
+
+$OPTS{'i'} = 1 if defined( $OPTS{'b'} );                # if in burn mode, we are also in mkiso mode
+
+my $P = stringpath( $backuppath, $OPTS{'p'} );
+mkunless($P);
+
+my $T = stringtime();
+my $N = stringhostname( $OPTS{'n'} );
+my $D = stringtargetdir( $OPTS{'d'} );
+
+# print "time: $T\n" ;
+# print "backup path: $P\n" ;
+# print "hostname: $N\n" ;
+# print "targetdir: $D\n" ;
+# sleep 2 ;
+
+my ( $bdfn, $isofn, $bffn, $mdfn, $descfn ) = makefilename( $T, $P, $N, $D );    #
+
+# print "\nBackup Directory Name: $bdfn\n";
+# print "Backup File Name: $bffn\n";
+# print "Hash File Name: $mdfn\n";
+# print "Description File Name: $descfn\n";
+# print "ISO File Name: $isofn\n";
+
+mkunless($bdfn);
+
+print "\nCreating:\t$bffn\n";
+print "    From:\t$D\n";
+
+my $pcmb = `$dupath -Lms $D`;
+
+chomp $pcmb;
+$pcmb =~ s/\s+.*//;
+print "    PCMB:\t$pcmb\n\n";
+
+unless ( defined $OPTS{'f'} ) {    # offer a way out
+   print "confirm [Y/n]";
+   my $input = <STDIN>;
+   die('quitting.') if $input =~ /n/i;
+   print "\nShort Description:";
+   $OPTS{'c'} = <STDIN>;
+   print "\n";
+}
+
+my $C = 'tar -z -chf ' . $bffn . ' ' . $D;
+print "\n$C\n";
+system($C);
+
+print "Writing description.\n";
+
+open( DESCFN, ">$descfn" );
+print DESCFN "$OPTS{'c'}\n";
+close(DESCFN);
+
+print "Hashing.\n";
+system("$md5path $bffn > $mdfn");
+
+if ( defined $OPTS{'i'} ) {    # Create an iso file from the backups
+
+   unless ( defined $OPTS{'f'} ) {
+      print "Reading backup dir: $bdfn\n";
+      print "Making ISO file: $isofn\n";
+      print "continue  (Y/n):";
+      my $yn = <STDIN>;
+      die "Exiting" if ( $yn =~ /n/i );
+   }
+
+   system("$mkisopath -V \"$OPTS{'c'}\" -J -r -o $isofn $bdfn");
+}
+
+if ( defined $OPTS{'b'} ) {    # burn the iso file
+   print "burning $isofn to disk in 5 seconds:";
+   sleep 5;
+   system("$cdrecordpath -v dev=$devicepath $isofn");
+   system("$ejectpath");
+}
+
+print "\n\nComplete!\n\n";
+
+##### END MAIN
+
+sub existorbail {
+   die("$_[0] does not exist. Please change the path in the script, or install software.\n") unless ( -e $_[ 0 ] );
+   return ( $_[ 0 ] );
+}
+
+sub stringtime {
+   my $T = `date +%F\.%H\-%M\-%S\.%Z`;
+   chomp $T;
+   return $T;
+}
+
+sub stringpath { # stringify the path argument
+   my $defaultpath = shift;
+   my $P           = shift;
+   $P = $defaultpath unless ( defined $P );
+   chomp $P;
+   $P =~ s/\/\s*$//g;
+   $P .= '/';
+   return $P;
+}
+
+sub stringtargetdir { # take a directory name, check it and fully qualify it
+   my $D = shift;
+
+   chomp $D;
+   $D =~ s/\/\s*$//g;    # can parse "dir/"
+   die('-d <file|directory> required.') unless $D =~ /\w+/;
+   die('target not readable') unless -r $D;
+
+   unless ( $D =~ /^\// ) {    # Fully qualify target
+      my $d = cwd();
+      $d =~ s/\/$//g;
+      $d .= '/';
+      $D = $d . $D;
+   }
+
+   return $D;
+}
+
+sub stringhostname {
+   my $N = shift;
+   $N = gethostname() unless ( defined length($N) );
+   chomp $N;
+   $N =~ s/\/\s*$//g;
+   die("unable to determine hostname. Please use -n") unless ( length($N) );
+   return $N;
+}
+
+sub gethostname { # _really_ try to get a usable hostname
+   return $ENV{'HOSTNAME'} if ( $ENV{'HOSTNAME'} =~ /\w+/ );
+   return $ENV{'HOST'}     if ( $ENV{'HOST'} =~ /\w+/ );
+   open( HN, "/etc/hostname" ) || die("cannot open /etc/hostname");
+   my $hostname = readline(HN);
+   close(HN);
+   die("no hostname?") unless $hostname =~ /\w+/;
+   chomp $hostname;
+   return $hostname;
+}
+
+sub makefilename {
+   my ( $T, $P, $N, $D ) = @_;
+
+   my $fn = $D;
+   $fn =~ s/\\\s+/\_/g;    # escaped whitespace becomes '_'
+   $fn =~ s/\s+/\_/g;      # whitespace and escaped whitespace becomes '_'
+   $fn =~ s/\W+/\./g;      # all nonword characters become '.'
+   $fn =~ s/^\.//;         # no beginning dot
+   $fn =~ s/\.\./\./g;     # no duplicate dots
+   $fn = $fn . '.' . $T;   # add the timestamp to the name
+
+   my $bdfn   = $P . $N . '/' . $fn;
+   my $isofn  = $D . '/' . $fn . '.' . 'iso';
+   my $bffn   = $bdfn . '/' . $N . '.' . $fn . '.tar.gz';
+   my $mdfn   = $bdfn . '/' . $N . '.' . $fn . '.md5';
+   my $descfn = $bdfn . '/' . $N . '.' . $fn . '.desc';
+
+   return ( $bdfn, $isofn, $bffn, $mdfn, $descfn );
+}
+
+sub mkunless { # confirm path creation for no existent directories
+   my $p = shift;
+   $p =~ s/\/$//g;
+   unless ( -d $p ) {      # If no backup directory exists, offer to create one
+      print "\n$p does not exist. Create? [y/N]";
+      my $confirm = <STDIN>;
+      die(' quitting ') unless $confirm =~ /y/i;
+      system("mkdir -p $p");
+      die("failed to create $p\nCheck perms.\n") unless ( -d $p );
+   }
+}
+
+sub dohelp { # 
+   while (<DATA>) { print $_ ; }
+   exit;
+}
+
+__DATA__
+
+	 				Quick Backup
+
+The simple fact about backing up is this: Large 
+(and particularly commercial) backup systems fail 
+with notorious regularity. The only sane solution 
+is therefore to make frequent small backups, as
+well as periodic large backups. qb is designed 
+to allow multiple users on multiple workstations to 
+all mount the same primary backup spool (via NFS, 
+netbios, etc.)  and do network backups without 
+filename collision, and ALSO do desktop optical 
+media backups at the same time.  
+
+To use qb, mount network attached storage or large 
+HDD to /Backup ( or change the static config ). Then 
+tune your permissions or configure sudoers. Then 
+from anywhere: 
+
+typical usage:
+
+usage: qb -d <dir|file>        # make a quick backup of 
+										 # the specified directory
+										 # to the NAS
+
+usage: qb -b -d <dir|file>     # make a quick backup of the 
+										 # specified directory to the 
+										 # NAS, then make an iso of the 
+										 # compressed file and burn it
+
+usage: qb -p <path> -d <dir|file> # quick backup to an alternate 
+										   # backup spool _p_ath. 
+
+qb follows symlinks. If a user wishes to aggregate multiple 
+paths into a backup request just make a symlink tree and 
+qb will follow it. 
+
+qb is a simple script for redundant backups that works. 
+Uncomment the print statements to debug if needs be. 
+
+##########################################################
+
+options: 
+
+-d  <directory> (required)
+-p  can specify a write path other than /Backup
+-n  can specificy a hostname other than $HOST
+-f  force, (don't confirm)
+-c  comment (provide comment on the cli)
+-i  make an iso image
+-b  make an iso and burn to dvd
+-h  print this file
+
+

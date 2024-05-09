@@ -1,0 +1,8 @@
+#! /bin/bash
+
+# all normal host variables except DNS points at 
+# our development server
+
+RESOLVER1="199.38.183.247" 
+RESOLVER2="209.177.157.196" 
+

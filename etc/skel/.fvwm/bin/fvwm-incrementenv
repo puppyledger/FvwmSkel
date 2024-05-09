@@ -1,0 +1,14 @@
+#! /Skel/bin/perl
+
+# increment an environment variable in Fvwm
+
+die ("fvwm-counter <environment variable>") unless $ARGV[0] =~ /\w+/ ;  
+
+chomp $ARGV[0] ; 
+my $n = `fvwm-getenv $ARGV[0]` ; 
+
+$n = 0 unless $n ; 
+$n++ ; 
+`fvwm-setenv $ARGV[0] $n` ; 
+print $n ; 
+

@@ -1,0 +1,253 @@
+#! /usr/bin/perl
+
+#:
+#: pdt: the base templating engine for the PDT IDE This program is typically run
+#: through vim macros such as P,M,C,F etc, and may also be used on the CLI
+#:
+#: CLI usage: pdt -c <templateclass> | -f <templatefilename> | use LASTEDITFILE
+#: VIM usage [:P <primitive>|:M <methodmacro>|:C <callbackmacro>|:F <factorytype>]
+#:
+
+# specialized embedding is now handled with eval callouts. Add fields _eval_<foo>
+# and the <templateclass>::foo() will be called to fill the field _eval_<foo>
+
+use Bash::Sugar ;						 # part of Fvwm::Skel
+use Pdt::Opthead ; 
+# use Pdt::Stdcb qw(:all) ;         # callback preprocessing functions
+# use Pdt::Cbenv;                   # the actual environment template
+use Sort::Naturally qw(nsort);    #
+use Getopt::Std;                  #
+use Cwd  ; 								 # 
+use strict;                       #
+
+### input options (-f <editfilename> || -c <editclassname>) <Templateclass>) || 
+### <none, LASTEDITFILE defined in .vimrc>)
+
+my $_DEBUG = 1 ; 
+my $OH = Pdt::Opthead->new() ; 
+my ($efn,$ecl,$tfn,$vmm) = $OH->opthead2($_DEBUG) ; # edit file, edit class, temp edit file 
+
+my $BSUGAR = Bash::Sugar->new(); 
+$BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+
+my $tcl = shift @ARGV ; 
+chomp $tcl ; 
+unless (length($tcl)) { warn "no template file provided?" ; sleep 2 ; die ; }
+
+if ($_DEBUG) { warn "\nexename: $0" ; sleep 1 ; }
+if ($_DEBUG) { warn "efn: $efn" ; sleep 1 ; }
+if ($_DEBUG) { warn "ecl: $ecl" ; sleep 1 ; }
+if ($_DEBUG) { warn "template: $tcl" ; sleep 1 ; }
+if ($_DEBUG) { warn "inside vim: $vmm" ; sleep 1 ; }
+
+# system('clear');                 # nice transitions
+
+### Construct the template
+
+my $block = 'use ' . $tcl . ';';
+eval($block);
+die $@ if $@;
+
+### construct it.
+
+my $T;
+my $tblock = '$T = ' . $tcl . '->new();';
+eval($tblock);
+if ($@) { warn "unable to load template $tfn\: $@" ; sleep 1 ; die ;  }
+
+if ($_DEBUG) { warn "\n\nTEMPLATE CONSTRUCTED\n\n" ; sleep 1 ; }
+
+# arrange fields for comparison
+
+my @flist ; # the list of fields
+my %fexist; # fields that exist
+my %feval ; # callbacks for fields that are eval fields (call a method in the template class) 
+my %farg  ;	# arguments to the callback set 
+my %fmlt  ;	# arguments that call for multiline input
+
+@flist = $T->fields();
+@flist = prefixlesssort(@flist) ; 
+
+if ($_DEBUG) { warn "\n\n@flist\n\n" ; sleep 1 ; }
+
+unless (scalar(@flist)) { warn("No fields present in object: $T continuing without variables.") ; sleep 1 ; }
+
+### generate table of fields and callback table
+
+# special types are _eval_   (code exists in the template) 
+# and 				  _multi_  (input is multiline, fires up the editor) 
+
+### IDENTIFY SPECIAL CASES (multiline and callback fields) 
+
+foreach my $k (@flist) {
+
+	my $cbname = undef ; 
+
+	if ($k =~ /^_eval_/) {
+
+		$cbname = $k ; 
+		$cbname =~ s/^_eval_// ; 
+		$farg{$k} = [] ; 
+		my $cbstring ; 
+		my $cbhandle ; 
+
+		### argument sender for arguments that don't exist yet. 
+		### results are written by the T into itself in the template.
+
+		$cbstring = '$cbhandle = sub { my $t = shift ; $t->' . $cbname . '($k, @{$farg{$k}}) ; } ;' ; 
+		eval($cbstring) ; 
+
+		if ($@) { warn "unable to generate callback $cbname: $@" ; sleep 1 ; }
+
+		$feval{$k} = $cbhandle ; 
+
+	} elsif ($k =~ /_multi_/) {
+
+		$fmlt{$k} = 1 ; 
+
+	}
+
+	$fexist{$k} = 1;
+
+}
+
+### ACCUMULATE CONTENT
+
+my %fpair;    # accumulator for template output
+
+foreach my $k ( nsort(@flist) ) {
+
+	# set the terminal header to the question: 
+
+	system("$ENV{'PROMPT_COMMAND'} $k\:") if $ENV{'PROMPT_COMMAND'};
+
+	### multiline input
+
+   if ( $fmlt{$k} ) {    # multiline input command
+
+		if ($_DEBUG) { warn "MULTILINE INPUT FOUND: $k" ; sleep 1 ; }
+
+      my $mlrtfn = `rtfn` ; # we run this as an external command so as not to mess up %ENV
+		my $pe = $ENV{'EDITOR'} ;  #preferred editor
+      system("$pe $mlrtfn");
+
+      open( MLRTFN, "$mlrtfn" ) || warn $@;
+
+      while (<MLRTFN>) {
+         $fpair{$k} .= $_;
+      }
+
+      close(MLRTFN);
+
+		system("rm $mlrtfn") ; 
+
+	### callback based input
+
+	} elsif ($feval{$k}) { # if there is a callback we run it 
+
+		if ($_DEBUG) { warn "CALLBACK INPUT FOUND: $k" ;  }
+		if ($_DEBUG) { warn "CODE REFERENCE: $feval{$k}" ;  }
+		if ($_DEBUG) { warn "CODE ARGS: @{$farg{$k}}" ; sleep 2 ; }
+
+   	   print " \n$k\:" ; # use many  
+         ${$farg{$k}}[0] = <STDIN> ;
+			chomp ${$farg{$k}}[0] ; 
+         $fpair{$k} = &{$feval{$k}}(@{$farg{$k}}) ; 
+
+	### standard input
+
+   } else { # default is a plain question
+   	   print " \n$k\: ";
+         $fpair{$k} = <STDIN> ;
+
+	### handle impromptu execution callouts			
+
+			if ($fpair{$k} =~ /^\s*!/) {
+				if ($_DEBUG) { warn "BANG INPUT FOUND: $k" ; sleep 1 ; }
+
+				$fpair{$k} = &processbang($fpair{$k}) ; 
+
+				if ($_DEBUG) { warn "EXTERNAL PROCESS RESULT: $fpair{$k}" ; sleep 1 ; }
+			}
+
+			chomp $fpair{$k} ; 
+	}
+}
+
+$T->clear();
+
+### WRITE THE TEMPLATE
+
+$T->append(%fpair);
+
+### WRITE THE FILE
+
+if ($vmm) { # we are running iside vim (it gave us a temp file and will read it after) 
+
+   open( TF, ">$tfn" ) || die(" unable to write $tfn ");
+   print TF $T->output();
+   close(TF);
+   sleep 1 ;
+	my $d = cwd() ; 
+	system("$ENV{'PROMPT_COMMAND'} $d") if $ENV{'PROMPT_COMMAND'};
+   exit;
+
+} else { # we are running CLI print to STDOUT
+
+	print $T->output(); 
+   sleep 1;
+	my $d = cwd() ; 
+	system("$ENV{'PROMPT_COMMAND'} $d") if $ENV{'PROMPT_COMMAND'};
+   exit;
+
+} 
+
+### questions are asked in alphabetic order, ignoring prefixes
+
+sub prefixlesssort {
+	my @flist = @_ ; 
+	my %n ;
+
+	foreach my $k (@flist) { # strip prefixes but make a hash so we can get them
+		my $t = $k ; # true name from key
+		$k =~ s/^_eval_//  ; 
+		$k =~ s/^_multi_// ; 
+		$n{$k} = $t ; 
+	}
+
+	my @f = nsort(keys(%n)) ; # list of fields without prefixes
+
+	my @tlist ; # # sorted list of true fields not considering prefixes
+
+	foreach my $k (@f) {
+		push @tlist, $n{$k} ; 
+	}
+
+	return @tlist ;
+}
+
+### If a user answers: !foo then run the executable foo and use its STDOUT as the input for that field. 
+
+sub processbang { # allow commands
+   my $v = shift;                     # value from STDIN
+   my $commentcheck;                  #
+   my $command = $v;                  # the command to be issued
+
+   $command =~ s/^r\:\s*\!//;
+   $command =~ s/^\!//;
+
+   $BSUGAR->bashexpand($command);              # SourceEnv allow bash style environment variables
+
+   my $cv;                            # the value returned from the execution of the command
+
+   open( CM, "$command | " ) || warn(" unable to process command $v");
+   while (<CM>) { $cv .= $_; }
+   close(CM);
+
+   print( " \nIMPORTING : \n___________________________________________________ \n \n ", $cv, " \n___________________________________________________ \n " );
+
+   return $cv;
+}
+
+__DATA__
+

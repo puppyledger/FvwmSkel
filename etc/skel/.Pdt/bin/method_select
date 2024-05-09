@@ -1,0 +1,16 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-49-05.EDT'
+
+export SQL_STATEMENT=$1 
+
+#:
+#: usage:M select 'SELECT FOO FROM BAR'  
+#:
+#: Template creates two methods, a prepare method, 
+#: and a runtime method. 
+#: 
+
+pdt Pdt::Method_Select
+

@@ -1,0 +1,14 @@
+# Desktop Pager
+# PAGERHEAD is set in LocalVar.fvwm
+
+Style "FvwmPager" NoTitle, Sticky, WindowListSkip, CirculateSkip, StaysOntop, FixedPosition
+
+*FvwmPager: Colorset * 23
+*FvwmPagerFore    #000000
+*FvwmPagerHilight #cccccc                                  
+*FvwmPagerFont -adobe-helvetica-bold-r-*-*-10-*-*-*-*-*-*-*
+*FvwmPagerGeometry $[PAGER_GEOMETRY] 
+*FvwmPagerLabel 0  $[PAGERHEAD]
+*FvwmPagerSmallFont 5x8
+
+

@@ -1,0 +1,91 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-41-18.EDT';
+
+# generate a callback for prepare methods in the current class
+# requires: $ENV{'LASTEDITCLASS'} be defined to point at the
+# currently edited file to work inline.
+# also any classes passed on the command line will
+# be processed with their respective functions added.
+
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbprepare;
+use strict;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+local $SIG{__WARN__} = sub { };
+
+# the name of the executable is used in the template
+
+my $execname = $0;
+$execname =~ s/^.*\///g;
+
+#
+
+my $doc    = Pdt::Cbprepare->new();    # get the template handle
+my @Eclass = env2class();              # get the list of classes to process Pdt::SourceEnv
+my $OUTFH  = rtfnorstdout();           # get a writable filehandle Pdt::Sourceenv
+
+# avoid duplication with a collision table
+
+my %COLLISION;
+
+# the name of the property we store callbacks in.
+
+my $mapname = 'cbprepare';
+
+# the root methods always get preference, so we set them aside.
+
+my @mapstatement;
+
+die('no classes defined') unless scalar(@Eclass);
+
+my $n = 0;
+
+foreach my $editclass (@Eclass) {
+   chomp $editclass;
+
+   my $fn    = seefn($editclass);    # get the filename for the class
+   my @mlist = seemethod($fn);       # read thefile and get all the methods.
+
+   my $foo;
+
+   foreach (@mlist) {
+      next unless $_ =~ /^_/;        # in query classes _ preceeds a prepare statement
+      chomp;
+      my $checkvalue = $_;
+
+      $foo = "\$self->" . $_ . '(1);';
+
+      if ($n) {                      # included the imported class in the comment if imported.
+         $foo = $foo . ' #' . "\t" . $editclass;
+      }
+
+      # flag to avoid duplicates.
+
+      push @mapstatement, $foo unless $COLLISION{$checkvalue};
+      $COLLISION{$checkvalue} = 1;
+   }
+   $n++;
+}
+
+@mapstatement = nsort(@mapstatement);
+my $bar = join "\n\t", @mapstatement;
+
+$doc->append(
+   'execname'     => $execname,
+   'mapname'      => $mapname,
+   'mapstatement' => $bar
+);
+
+print $OUTFH $doc->output();
+print $OUTFH "\n";
+

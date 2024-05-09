@@ -1,0 +1,5 @@
+#! /bin/bash 
+
+source $HOME/.pdtrc
+xterm -e "doexec cll.pl -o $PDT_BIN_PATH/foo.db;sleep 5"
+

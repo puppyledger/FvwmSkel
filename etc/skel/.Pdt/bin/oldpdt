@@ -1,0 +1,274 @@
+#! /usr/bin/perl
+
+#: pdt: the base templating engine for the PDT IDE This program is typically run
+#: through vim macros such as P,M,C,F etc, However command line usage is also
+#: provided.
+#:
+#: CLI usage: pdt -n <class> -f <writefile>
+#: VIM usage [:P <primitive>|:M <methodmacro>|:C <callbackmacro>|:F <factorytype>]
+#:
+
+use Bash::Sugar ;						 # part of Fvwm::Skel
+use Pdt::Stdcb qw(:all) ;         # callback preprocessing functions
+use Pdt::Cbenv;                   # the actual environment template
+use Pdt::Bonk;                    #
+use Sort::Naturally qw(nsort);    #
+use Getopt::Std;                  #
+use strict;                       #
+
+# $::_BONK = 1;
+
+my $BSUGAR = Bash::Sugar->new() ; 
+
+my %OPTS;
+getopts( 'n:f:h', \%OPTS );
+
+# when running from vim the environment variable RTFN is defined
+# already containing a random temp file we can stage with. If
+# running from the command line, we need to generate one.
+# the -n <class> is used on the CLI to pass the class to use as
+# a template. Called from VIM it is just passed as ARGV[0]
+# we can use this to detect whether we need to generate our
+# own temp file name to stage with.
+
+my $class;
+my $writefile;
+my $cliflag;
+
+if ( length( $OPTS{'n'} ) ) {    # running CLI MODE
+   $class = $OPTS{'n'};
+   $writefile = $OPTS{'f'} if length( $OPTS{'f'} );
+   $cliflag++;
+} else {                         # running VIM mode
+   $class     = shift(@ARGV);
+   $writefile = $ENV{'RTFN'};
+   die(".vimrc RTFN function appears not to be working.") unless length($writefile);
+   $cliflag = undef;
+}
+
+die("Template class required in ARGV.") unless length($class);
+
+chomp $class;
+chomp $writefile;
+
+system('clear');                 # nice transitions
+
+# read any special environment variables we may have.
+
+my $PDTRC = $ENV{'HOME'} . "/" . '.pdtrc';
+
+$BSUGAR->sourceenv($PDTRC);
+
+# sometimes we are brain dead and type a file. Try and figure out
+# the class and do our job anyway.
+
+chomp $class;
+if ( $class =~ /\.pm$/ ) { $class = $BSUGAR->seepack($class); }
+
+# get the class for the template.
+
+my $block = 'use ' . $class . ';';
+eval($block);
+die $@ if $@;
+
+# construct it.
+
+my $T;
+my $tblock = '$T = ' . $class . '->new();';
+eval($tblock);
+die $@ if $@ =~ /\w+/;
+
+# arrange fields for comparison
+
+my @flist;     # the list of fields
+my %fexist;    # same list as a truth table
+
+@flist = $T->fields();
+warn("no fields present in object: $T continueing without variables.") unless scalar(@flist);
+foreach my $k (@flist) {
+   $fexist{$k} = 1;
+}
+
+# callback containers
+
+my %fpairs;    # accumulator
+my $evh;       # environment variable hash, lc key, to uc environment variable value
+my $cbqh;      # truth table for the existence of multiline questions
+my $cbch;      # hash mapping fields to cascading template execution
+
+# screening functions (test for intended functionality and create truth tables)
+
+$evh = pcbenvironment( $T, \%fexist );    # Pdt::Stdcb (C: cbenv)
+$cbqh = pcbquestion( $T, \%fexist );      # Pdt::Stdcb	(M: question)(C: cbquestion)
+$cbch = pcbcascade( $T, \%fexist );       # Pdt::Stdcb	(C: cbcascade)
+
+foreach my $fieldname ( nsort(@flist) ) {
+
+   if ( ref($evh) eq 'HASH' ) {
+
+      if ( exists( $evh->{$fieldname} ) ) {    # enable autopopulation from %ENV
+
+         # warn "EV: $fieldname" ;
+         # sleep 2;
+
+         # values that are to be interpolated from the bash environment will
+         # be identified in the cbenv callback list. There are inserted into
+         # the respective fields without any questions. UPPERCASE variables
+         # map to lowercase values.
+
+         $fpairs{$fieldname} = $evh->{$fieldname};
+         next;
+
+      }
+
+   } elsif ( defined $cbch->{$fieldname} ) {    # enable predefined cascades
+
+      # cascadecb maps fieldnames to external template classes.
+      # when a matching field is found, the respective template
+      # is called.
+
+      my $cascadeclass = $T->{'cbcascade'}->{$fieldname};
+      my $crtfn        = `rtfn`;
+
+      # $::_BONK = 1;
+
+      Bonk "pdt -n $cascadeclass -f $crtfn";
+
+      system("pdt -n $cascadeclass -f $crtfn");
+      open( CRTFN, "$crtfn" ) || die("unable to open $crtfn");
+
+      while (<CRTFN>) {
+         bonk $_ ;
+         $fpairs{$fieldname} .= $_;
+      }
+
+      Bonk "end processing cascade";
+
+      next;
+   }
+
+   # cbquestion checks for methods matching fieldnames in the
+   # templates. If found those methods are called to generate
+   # multiline text questions instead of using the single line
+   # format.
+
+   if ( $cbqh->{$fieldname} ) {    # enable predefined multiline questions
+      Bonk $fieldname ;
+      print &{ $T->{'cbquestion'}->{$fieldname} };
+   } else {
+      print " \n$fieldname\: ";
+   }
+
+   my $v = <STDIN>;
+   chomp $v;
+
+   # users can ! run other proggies
+
+   if ( $v =~ /^\!\s*multiline$/ ) {    # multiline input command
+
+      my $mlrtfn = `rtfn`;
+      system("vim $mlrtfn");
+      open( MLRTFN, "$mlrtfn" ) || warn $@;
+
+      while (<MLRTFN>) {
+         $fpairs{$fieldname} .= $_;
+      }
+
+      close(MLRTFN);
+
+   } elsif ( $v =~ /^\!\s*cascade/ ) {    # manually cascade another class
+
+      my $csclass = $v;
+      chomp $csclass;
+      $csclass =~ s/^\!\s*cascade\s*//;
+      warn $csclass;
+      my @C = split( /\s+/, $csclass );
+
+      foreach my $c (@C) {
+         next unless length($c);
+         my $csrtfn = `rtfn`;
+         system("pdt -n $c -f $csrtfn");
+         my $eflag = 0;
+         open( CSRTFN, "$csrtfn" ) || $eflag++;
+         Bonk $@ if $eflag;
+         next if $eflag;
+         while (<CSRTFN>) { $fpairs{$fieldname} .= $_; }
+         close(CSRTFN);
+      }
+
+   } elsif ( $v =~ /^\!/ ) {
+
+      $fpairs{$fieldname} = processbang($v);
+      my $saved = 0;
+
+      until ($saved) {    # loop to save value
+
+         print " \n $fieldname\: Save ? [ Y / n ] ";
+
+         my $confirm = <STDIN>;
+
+         $saved++ unless ( $confirm =~ /n/i );
+
+         unless ($saved) {
+            print " \n $fieldname\: ";
+            $v = <STDIN>;
+            chomp $v;
+            $fpairs{$fieldname} = processbang($v);
+         }
+      }
+
+   } else {
+      $fpairs{$fieldname} = $v;
+   }
+}
+
+$T->clear();
+
+# then write the variables to the template.
+
+$T->append(%fpairs);
+
+# if we are running from vim, or without a CLI specified
+# filename we output to STDOUT, otherwise we write to
+# the requested file if able
+
+unless ($cliflag) {    # we are running from vim
+   open( TF, ">$writefile" ) || die(" unable to write $writefile ");
+   print TF $T->output();
+   close(TF);
+   sleep 1;
+   exit;
+} elsif ( length( $OPTS{'f'} ) ) {    # we are running CLI, a particular write file is requested.
+   open( FOO, ">$OPTS{'f'}" ) || die(" unable to open $OPTS{'f'} ");
+   print FOO $T->output();
+   close(FOO);
+   sleep 1;
+   exit;
+} else {
+   print $T->output();
+   exit;
+}
+
+sub processbang { # allow commands
+   my $v = shift;                     # value from STDIN
+   my $commentcheck;                  #
+   my $command = $v;                  # the command to be issued
+
+   $command =~ s/^r\:\s*\!//;
+   $command =~ s/^\!//;
+
+   bashexpand($command);              # SourceEnv allow bash style environment variables
+
+   my $cv;                            # the value returned from the execution of the command
+
+   open( CM, "$command | " ) || warn(" unable to process command $v");
+   while (<CM>) { $cv .= $_; }
+   close(CM);
+
+   print( " \nIMPORTING : \n___________________________________________________ \n \n ", $cv, " \n___________________________________________________ \n " );
+
+   return $cv;
+}
+
+__DATA__
+

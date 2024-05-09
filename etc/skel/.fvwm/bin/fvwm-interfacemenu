@@ -1,0 +1,141 @@
+#! /usr/bin/env skelperl
+
+# fvwm-interface menu. This program look for interface setup 
+# scripts in $SKELPATH/.interface which are named: 
+#
+# <interface>.<description>
+#
+# <description> is used for printing the menu. <interface> is 
+# compared against /proc/net/dev, and ONLY those interfaces 
+# which are there have their respective interfaces menu-ized, 
+# which of course points to the actual script file to run 
+# in order to set up the interface. 
+
+use Cwd     ;
+use Base::O ; 
+use Sort::Naturally qw(nsort) ; 
+
+use strict;
+
+my $dosudo = 1 ; # run the interface script under sudo 
+
+my $skelpath = '/etc/skel/.interface' ; 
+my $scriptpath = $ENV{'HOME'} . '/.interface' ; 
+my $hostname = $ENV{'HOSTNAME'} ; 
+$hostname =~ s/\..*//g ; # left most atom only
+
+$scriptpath = $skelpath unless -d $scriptpath ; 
+die ('no interface configuration path available.') unless -d $scriptpath ; 
+
+# get interface scripts matching this hostname, 
+# and living in ~/.interface as hostname.interface.description
+
+print "HOSTNAME $hostname \n\n" ; 
+
+my ($interface,$start) = Base::O->new() ; 
+opendir(CFG,$scriptpath) || die ('failed to opendir: ~/.interface') ; 
+my @cfgfile = readdir CFG ; 
+closedir(CFG) ; 
+
+my %systeminterface ; 
+
+# Get the interfaces on THIS system
+
+open (PND, '/proc/net/dev') || die ('failed to open: /proc/net/dev') ; 
+while(<PND>) { #
+        next if $_ =~ /\|/ ;
+        $_ =~ s/^\s+//g ;
+        $_ =~ s/\:.*//g ;
+        chomp $_ 	;
+	$systeminterface{$_} = 1 ; 
+}      
+close(PND) ; 
+
+# compare them to policies and make a list 
+
+foreach(@cfgfile) { # consolidate a list of configurations
+	next if ($_ =~ /^\./) ; 
+	my ($menuhost,$menuiface,$menudesc) = split(/\./,$_) ; 
+	next unless ($menuhost eq $hostname)  ; 
+	$interface->{$menuiface} = [] unless defined $interface->{$menuiface} ;  
+	push @{$interface->{$menuiface}}, {'menudesc' => $menudesc, 'menufile' => $_, 'present' => $systeminterface{$menuiface}} ; 
+}
+
+# $interface->DUMPSELF() ; 
+
+my @mainmenublock ; 
+my @submenublock  ; 
+
+foreach my $k (nsort(keys %$interface)) { # interface configurations present
+
+	my $ispresent = 0 ; 
+	my @menuline = () ; 
+
+	foreach(@{$interface->{$k}}) { # the configurations available for THIS interface
+		if ($_->{'present'}) {
+			push @menuline, submenuline(%$_) ; 
+			$ispresent++ ; 
+		} 
+	}
+
+	if ($ispresent) {
+		push @submenublock, submenuhead($k) ; 
+		push @submenublock, @menuline ; 
+		push @mainmenublock, mainmenuline($k) ; 
+	}
+
+}
+
+unshift @mainmenublock, mainmenuhead() ;  
+
+print @mainmenublock ; 
+print @submenublock ; 
+print "\n\n" ;
+
+## 
+
+sub mainmenuhead { # 
+	my $text = "\n\nDestroyMenu InterfaceMenu" . "\n" . "AddToMenu InterfaceMenu" ;
+	return $text ; 
+}
+
+sub mainmenuline { # make the interface menu
+	my $k = shift ; 
+	my $n = $k ; 
+	$n =~ s/(\d+)/\&$1/ ; # key the interface number
+
+	my $text = "\n" 
+	. '+ I + '
+	. $n 
+	. ' Popup InterfaceMenu_' 
+	. $k ; 
+
+	return $text ; 
+}
+
+sub submenuhead { # make a submenu header for interface specific menus
+	my $k = shift ; 
+	my $text = "\n\nDestroyMenu InterfaceMenu_" . $k . "\n" . "AddToMenu InterfaceMenu_" . $k ; 
+	return $text ; 
+}
+
+sub submenuline { # make the script callback line 
+	my %cfg = @_ ; 
+
+	my $text ; 
+
+	$text .= 
+		"\n\+ \'\&"
+		. $cfg{'menudesc'} 
+		. "\' Exec xterm -e " ;  
+
+	$text .= "sudo " if $dosudo ; 
+
+	$text .= $scriptpath 
+		. '/'
+		. $cfg{'menufile'} ; 
+	
+	return $text ; 
+}
+
+

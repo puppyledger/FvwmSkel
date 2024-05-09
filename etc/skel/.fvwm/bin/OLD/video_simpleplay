@@ -1,0 +1,7 @@
+#! /home/x1/.fvwm/bin/perl
+
+my $sfn = `fvwm-getenv VIDEOFN` ;  
+chomp $sfn  ; 
+die ('no video captured')  unless $sfn =~ /\w+/ ;   
+exec ("mplayer $sfn") ; 
+

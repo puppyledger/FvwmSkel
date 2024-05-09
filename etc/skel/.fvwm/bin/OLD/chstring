@@ -1,0 +1,49 @@
+#! /Skel/bin/perl 
+
+#: match and replace a string in a file 
+
+use Cwd ; 
+
+my $fn = shift @ARGV ; 
+my $oldstring = shift @ARGV ; 
+my $newstring = shift @ARGV ; 
+chomp $fn ; 
+chomp $oldstring ; 
+chomp $newstring ; 
+
+die('usage: chstring <filename> <oldstring> <newstring>') unless $fn =~ /\w+/ ; 
+die('usage: chstring <filename> <oldstring> <newstring>') unless $oldstring =~ /\w+/ ; 
+die('usage: chstring <filename> <oldstring> <newstring>') unless $newstring =~ /\w+/ ; 
+
+my $path = getcwd() ; 
+$path =~ s/\/$//g ; # get rid of trailing slash if one 
+$path =~ s/$/\//  ; # put one back
+$fn =~ s/^/$path/ ; # prepend the path 
+die('file does not exist: $fn') unless (-e $fn) ; #
+die('file is a directory: $fn') if (-d $fn) ; #
+
+print "changing $oldstring to $newstring in $fn" . ' [Y/n]' ; 
+my $yn = <STDIN> ; 
+die ("aborting") if $yn =~ /n/i ; 
+print "\n" ; 
+
+# FILE SWAP 
+my $r = rand()  ; 
+$r =~ s/\D//g   ; 
+
+my $newfn = $fn . $r ; 
+
+open (OLD,"< $fn") || die ("can't read file") ; 
+open (NEW,"> $newfn") || die ("can't write file") ;  
+
+while(<OLD>) {
+	$_ =~ s/$oldstring/$newstring/g ; 
+	print NEW $_ ; 
+}
+
+close(OLD) ; 
+close(NEW) ; 
+
+rename ($fn, "$fn.orig") ; 
+rename ($newfn, $fn) ;
+

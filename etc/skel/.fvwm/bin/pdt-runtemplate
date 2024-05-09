@@ -1,0 +1,117 @@
+#! /home/x1/.fvwm/bin/perl
+
+#
+# NOT COMPLETE
+#
+# This is intended to become a fvwm version of runtemplate
+#
+
+
+use Class::Path ; 
+use Base::H ; 
+use Base::A ; 
+use Getopt::Std ;
+use Tk ; 
+
+my %OPTS ;
+getopts('f:', \%OPTS) ; # path ,x string request. 
+
+# Make sure there is a file: 
+die ("no file specified") unless $OPTS{'f'} =~ /\w+/ ; 
+die ("file does not exist") unless -e $OPTS{'f'} ; 
+my $fn = $OPTS{'f'} ; 
+
+# Get the package name
+open (FN,$fn) ; 
+my $line = readline(FN) || die ('going blind are we?'); 
+close (FN)  ; 
+chomp $line ; 
+die ('not a package?') unless $line =~ /package/ ; 
+$line =~ s/^\s*package\s*// ; 
+$line =~ s/\#.*$//   ; 	# remove comments
+$line =~ s/\;.*//g ; 	# removed crammed perl 
+my $pn = $line ;	# preserve the lone package name 
+$line =~ s/$/\;/  ; 		
+$line =~ s/^/use /;  #
+
+# See if it loads
+eval($line)  ; 
+die $@ if $@ ; 
+
+# define a sub to get dynamic access
+my $getfields = \sub {
+	my $pn = shift ; 
+	my $T  ; # the template
+	my @fl ; # the list of fields
+
+	my $block = 
+	'use ' . $pn . ';'
+	.  '$T = '. $pn . '->new();'
+	. '@fl = ' . '$T->fields();' ; 
+
+	die($@) if $@ ; 
+
+	eval($block)	 ; 
+	return ($T, @fl) ; 
+} ;
+
+# get the dynamic data
+my @fl = &$getfields($pn) ; # template fields
+my $T = shift(@fl) ; # the template
+$T->clear() ; # reset the properties in the template
+
+# start Tk 
+my $MW = MainWindow->new() ; # Tk MW 
+$MW->geometry($ENV{'TkSmallGeom'}) ; 
+my $WindowID = $MW->wrapper->[0] ; 
+
+# devide upper and lower
+my $F1 = MW->Frame()->pack() ;
+my $F2 = MW->Frame()->pack() ;
+
+# generate the label->entry pairs
+my $WL = Base::A->new() ; # Widget List
+foreach my $fieldname (@fl) { 
+	$WL->sprout() ; # add a widget container to the list
+	my $WC = $WL->[$WL->lindex()] ; # and extract it. 
+	$WC->fieldname($fieldname) ; 
+	$WC->Label($F1->Label(-text => $fieldname)->grid()) ; 
+	$WC->Entry($F1->Entry(-textvariable => \$WC->{'fieldvalue'})->grid()) ; 
+}
+
+# User control
+my $B1 = $F2->Button(-text => 'Cancel')->pack() ; 
+my $B2 = $F2->Button(-text => 'Clear')->pack() ; 
+my $B3 = $F2->Button(-text => 'Save', -command => \sub{ displaycontent($T,$WL);})->pack() ; 
+
+# $MW->bind('<KeyRelease-Return>' => \&displaycontent($T, $WL)) ; 
+# $MW->bind('<KeyRelease-y>' => \&dosomething) ; 
+# $MW->bind('<KeyRelease-Escape>' => \&dosomething) ; 
+# $MW->bind('<KeyRelease-n>' => \&dosomething) ; 
+
+MainLoop;
+
+# Covert the input to display outputj 
+sub displaycontent {
+	my $T = shift  ; 
+	my $WL = shift ; 
+	my %foo ; 
+	foreach my $pair (@$WL) {
+		$foo{$pair->{'fieldname'}, => $pair->{'fieldvalue'}} ; 
+	}
+	$T->append(%foo) ; 
+	open (TKTEXT, "|fvwm-tktext") ;  
+	print TKTEXT $T->output() ; 
+	exit ;  
+}
+
+sub dosomething {
+	my $self = shift ; 
+}
+
+sub warp2me {
+	my $warpblock = 'FvwmCommand \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'' ; 
+	system ($warpblock) ; 
+}
+
+

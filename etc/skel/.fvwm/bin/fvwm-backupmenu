@@ -1,0 +1,28 @@
+#! /usr/bin/env skelperl
+
+#: this program reads the projects path file, and creates a menu with 
+#: the commands neccessary to back up the respective directories
+#: see the qb -h for details on quick backup. 
+
+use strict; 
+
+my %mypath ; 
+
+open (PATHS, "$ENV{'SKELPATH'}/.path_state") || die ("no path file.")  ; 
+
+while(<PATHS>) { 
+	chomp ; 
+	next unless $_ =~ /\w+/  ; 
+	next unless $_ =~ /\:/   ; 
+	my @f = split(":",$_)    ; 
+	$mypath{'$f[0]'} = $f[1] ; 
+}
+
+close(PATHS) ; 
+
+foreach (keys(%mypath)) {
+	my $command = "xterm -e sudo -u backup \$\[SKELPATH\]/bin/qb -d $mypath{$_}" ; 
+        my $line = '+ I + "' . $_  . '" ' . 'Exec ' . $command . "\n"; 
+	print $line ; 
+}
+

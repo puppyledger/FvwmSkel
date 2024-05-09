@@ -1,0 +1,140 @@
+2021-07-11.09-55-56.EDT
+
+If pulseaudio is running in -system mode from runit, you need to add the user 
+to groups pulse, and pulse-access. 
+
+Sat Jul 10 17:37:03 EDT 2021
+
+So we have added pulseaudio to our startup scripts. What has happened is that 
+now even root can't run pavucontrol, (where it could when pulse was running 
+from the CLI. 
+
+The ability to speakertest still works. arecord in the default format scratches, 
+but using options: 
+
+arecord -c2 -r44100 > foo.wav seems to give a recording without echo. Notably the 
+computer speakers are now off, but the audio from the jack seems to work.  So it 
+appears that pulse disables the built-in speakers (good) notably alsa mixer still 
+works for adjusting volume, so running pavucontrol at the moment seems unnecessary. 
+
+
+# HERE 
+
+We see
+
+Sat Jul 10 06:57:00 EDT 2021
+
+I think that running pulse from runit as a system process may be the correct move. 
+There are some changes that have to be made in order to do this. They are as follows
+
+# change client.conf by adding
+
+; default-server = /var/run/pulse/native
+; autospawn = no # (should be yes if running from dbus, no if running from runit or systemd)  # user added
+
+# note that /var/run/pulse/native was not installed by void so we: 
+
+mkdir -p /var/run/pulse
+chown root:audio /var/run/pulse
+chmod 760 /var/run/pulse
+
+# then we have to create a runit script
+
+# There was already a pulseaudio directory in /etc/sv so we linked it to the startup directory: 
+
+ln -s /etc/sv/pulseaudio /var/service/ 
+
+Sat Jul 10 06:36:32 EDT 2021
+
+So if we run the pulseaudio start command through dbus as above, and run pavucontrol as root, 
+we find that pavucontrol runs, and that the mic level indicator in pavucontrol shows that 
+it is getting audio.  
+
+So there appears to be two problems remaining. The first appears to be a dbus permissions 
+problem. After that we have to problem of figuring out whether we can capture straight 
+from pulse to ffmpeg, or whether we still have an echo (possibly dmix) related problem 
+in alsa. 
+
+
+2021-07-10.06-23-26.EDT
+
+# running
+
+pactl list sinks 
+
+# gets this error: 
+
+XDG_RUNTIME_DIR (/run/user/0) is not owned by us (uid 1000), but by uid 0! (This could e g happen if you try to connect to a non-root PulseAudio as a root user, over the native protocol. Don't do that.)
+Connection failure: Connection refused
+pa_context_connect() failed: Connection refused
+
+# we are running pulseaudio from dbus using:  
+
+pulseaudio --daemonize=no --exit-idle-time=-1  
+
+# 
+
+There is actually a directory /run/user/0, so there seems to be a permissions issue. 
+
+Tue Jul  6 15:16:40 EDT 2021
+
+got the mic working with alsa and arecord, however ffmpeg 
+is getting a double echo when trying to pull an audio 
+stream. Perhaps getting pulseaudio working is the next 
+step. 
+
+
+ALSO NOTES: 
+
+1. Alsa daemon reads /etc/asoundrc and then cascades 
+   the configuration into ~/.asoundrc. If you are using 
+   anything other than a stock alsa configuration,  This 
+   means that system updates to alsa WILL reinstall a 
+   /etc/asoundrc and clobber your sound system. 
+
+2. The installer seems to also reset the /etc/group:audio
+   group deleting any users that have been added to it. 
+   So note that you will need to reconfigure that as well 
+   with a usermod <user> -G <userexistinggroups>,audio
+   (I need to write a tool for this?) 
+   
+3. The way that I prefer to deal with this problem is 
+   is to just delete /etc/asoundrc and only ever use 
+   use user level sound configurations. This should make 
+   sound configurations install with the user, but be 
+   selectable based on hardware. 
+
+4. My solution is to create hardware asound profiles in 
+   my windows manager interface directory, and then 
+   symlink that config into the user directory. 
+   In this fashion hardware profiles replicate to all 
+   users and the audio configuration can be changed on a 
+   per host basis. In my case I use fvwm, so I put my 
+   .asoundrc file in:   
+
+   ~/.fvwm/alsa/asoundrc.<hardwareprofilename>
+
+   and symlink it: 
+
+   ln -s ~/.fvwm/alsa/asoundrc.<hardwareprofilename> ~/.asoundrc
+
+
+
+HARDWARE NOTES: Toshiba toshiba-cd75d-a7310 
+
+   The audio jacks are umarked, but the headphones are close to the user 
+   and the mic is away from the user. 
+
+   The machine puts the main audio card on device 1. The default for 
+   asoundrc is to put it on device 0. The syntax is hw:<cardnumber>,<channel>
+
+TROUBLESHOOTING: 
+
+   first check that you are in group audio. If you are try playing a file 
+   with aplay from root. If it works it is probably a perms problem, if not 
+   it is probably a conf problem.  
+
+   the audio devices are in /dev/snd 
+
+   you can list them with aplay. 
+

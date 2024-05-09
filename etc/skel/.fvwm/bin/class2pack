@@ -1,0 +1,18 @@
+#! /usr/bin/perl
+
+# Bash::Sugar is a collection of one (or a few) liners that makes 
+# living with bash easier. If there is a "Can't locate Bash::Sugar" 
+# error, then you need to adjust your PERL5LIB environment variable 
+# to find the directory where Bash::Sugar lives. If you are using 
+# FvwmSkel this is typically $HOME/.fvwm/lib/perl5
+
+# This program just prints the help file for the Bash::Sugar programs. 
+# Note that many programs symlink here, and that they will each run 
+# their respectively named perl method in the Bash::Sugar class. 
+
+use Bash::Sugar ; 
+use strict ; 
+
+my $bs = Bash::Sugar->new() ; 
+$bs->dobyexename() ; 
+

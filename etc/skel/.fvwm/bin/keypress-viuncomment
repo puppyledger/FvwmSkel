@@ -1,0 +1,5 @@
+#! /bin/bash
+
+# this is defined in $XFVWMPATH/KeyBindings.fvwm
+
+`$XFVWMCMD 'Current FakeKeypress press Escape press 0 press x press j'` ; 

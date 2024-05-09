@@ -1,0 +1,200 @@
+#! /bin/bash 
+
+################# UNCONFIGURE ##################
+
+### LAYER 2
+
+echo "WIPING CONFIG"
+
+ip link set dev $W0_INTERFACE down
+
+### LAYER 3 
+
+### IPV4 FLUSH NAT/MANGLE
+
+iptables -F
+iptables -t nat -F
+iptables -t mangle -F
+
+### IPV6 FLUSH IPV6 NAT/MANGLE
+
+ip6tables -F
+ip6tables -t nat -F
+ip6tables -t mangle -F
+
+#### IPV4 DELETE CUSTOM CHAINS
+
+iptables -X LOG_ACCEPT 
+iptables -X LOG_DROP
+iptables -X W0_V4_PUBLIC_OUTPUT_ACCEPT
+iptables -X W0_V4_PUBLIC_INPUT_ACCEPT
+iptables -X W0_V4_CLEANUP_INPUT_DROP
+iptables -X W0_V4_CLEANUP_OUTPUT_DROP
+
+### IPV6 DELETE CUSTOM CHAINS
+
+# NONE
+
+echo "WIPE COMPLETE"
+
+################# RECONFIGURE ##################
+
+### IPV4 BASE
+
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+
+### IPV6 BASE
+
+ip6tables -P INPUT DROP
+ip6tables -P OUTPUT DROP
+ip6tables -P FORWARD DROP
+
+echo "DEFINING CUSTOM CHAINS"
+
+### IPV4 LOGGING RULES
+
+iptables -N LOG_ACCEPT 
+iptables -N LOG_DROP 
+
+iptables -A LOG_ACCEPT -j LOG --log-level 6 --log-prefix "INPUT:ACCEPT: " 
+iptables -A LOG_ACCEPT -j ACCEPT 
+
+iptables -A LOG_DROP -j LOG --log-level 6 --log-prefix "INPUT:DROP: " 
+iptables -A LOG_DROP -j DROP
+
+### IPV6 LOGGING CHAINS
+
+### IPV4 GARBAGE COLLECTION CHAINS
+
+iptables -N W0_V4_CLEANUP_OUTPUT_DROP
+iptables -N W0_V4_CLEANUP_INPUT_DROP
+
+### CRAFTED FRAMES
+
+iptables -A W0_V4_CLEANUP_INPUT_DROP\
+	-i $W0_INTERFACE\
+	-d 127.0.0.1\
+	-j LOG_DROP 
+
+### IGNORE NOISE
+
+### ANYTHING WE DON'T KNOW ABOUT
+
+iptables -A W0_V4_CLEANUP_OUTPUT_DROP\
+	-o $W0_INTERFACE\
+	-j LOG_DROP
+
+iptables -A W0_V4_CLEANUP_INPUT_DROP\
+	-i $W0_INTERFACE\
+	-j LOG_DROP  
+
+echo "CLEANUP RULES COMPLETE"
+
+## IPV6 GARBAGE COLLECTION RULES
+
+# NONE, NO IPV6
+
+### IPV4 PUBLIC INTERNET RULES 
+
+iptables -N W0_V4_PUBLIC_OUTPUT_ACCEPT 
+iptables -N W0_V4_PUBLIC_INPUT_ACCEPT 
+
+# ALLOW ICMP TO/FROM DNS SO WE CAN VRFY UP/UP
+
+iptables -A W0_V4_PUBLIC_OUTPUT_ACCEPT\
+	-o $W0_INTERFACE\
+	-d $W0_NS1\
+	-p icmp\
+	-j ACCEPT 
+
+iptables -A W0_V4_PUBLIC_INPUT_ACCEPT\
+	-i $W0_INTERFACE\
+	-s $W0_NS1\
+	-p icmp\
+	-j ACCEPT 
+
+# DNS 
+
+iptables -A W0_V4_PUBLIC_OUTPUT_ACCEPT\
+	-o $W0_INTERFACE\
+	-d $W0_NS1\
+	-p udp -m multiport --dports 53,853\
+	-j ACCEPT
+
+iptables -A W0_V4_PUBLIC_INPUT_ACCEPT\
+	-i $W0_INTERFACE\
+	-s $W0_NS1\
+	-p udp -m multiport --sports 53,853\
+	-j ACCEPT 
+
+echo "DNS RULES COMPLETE"
+
+# HTTP/S
+
+iptables -A W0_V4_PUBLIC_OUTPUT_ACCEPT\
+	-o $W0_INTERFACE\
+	-p tcp -m multiport --dports 80,443\
+	-m conntrack --ctstate NEW,ESTABLISHED\
+	-j ACCEPT
+
+iptables -A W0_V4_PUBLIC_INPUT_ACCEPT\
+	-i $W0_INTERFACE\
+	-p tcp -m multiport --sports 80,443\
+	-m conntrack --ctstate ESTABLISHED\
+	-j ACCEPT
+
+echo "HTTP RULES COMPLETE"
+
+### IPV6 PUBLIC INTERNET RULES 
+
+# NONE DROP ALL IPV6
+
+echo "PUBLIC INTERNET RULES COMPLETE "
+
+### PERMIT LOOPBACK TRAFFIC
+
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+
+echo "LOOPBACKS COMPLETE"
+
+### PREPEND CHAINS TO STD CHAINS (float downwards from top)
+
+iptables -I OUTPUT 1 -j W0_V4_CLEANUP_OUTPUT_DROP
+iptables -I OUTPUT 1 -j W0_V4_PUBLIC_OUTPUT_ACCEPT
+
+iptables -I INPUT 1 -j W0_V4_CLEANUP_INPUT_DROP
+iptables -I INPUT 1 -j W0_V4_PUBLIC_INPUT_ACCEPT
+
+echo "BINDINGS COMPLETE"
+echo "################ INPUT ########################"
+iptables -n -L INPUT 
+iptables -n -L W0_V4_PUBLIC_INPUT_ACCEPT
+iptables -n -L W0_V4_CLEANUP_INPUT_DROP 
+iptables -n -L LOG_DROP 
+
+echo "################ OUTPUT ########################"
+iptables -n -L OUTPUT 
+iptables -n -L W0_V4_PUBLIC_OUTPUT_ACCEPT
+iptables -n -L W0_V4_CLEANUP_OUTPUT_DROP 
+iptables -n -L LOG_DROP 
+echo "################ END ###########################"
+sleep 1; 
+
+echo "Turning up: $W0_INTERFACE ..." ; 
+
+sleep 1
+
+ifconfig wlp1s0 up
+wpa_supplicant -i wlp1s0 -c /etc/wpa_supplicant/wpa_supplicant.conf -P /var/tmp/wpa_supplicant.pid -B # use -d instead for debugging
+/bin/dhcpcd -S domain_name_servers=$W0_NS1 & 
+sleep 4 
+
+echo "################ NUMBERING #####################"
+ip address show
+netstat -lp
+# ping -c 3 $W0_NS1
+echo "################ COMPLETE ######################"
+

@@ -1,0 +1,65 @@
+
+
+Tue Jul  6 15:16:40 EDT 2021
+
+got the mic working with alsa and arecord, however ffmpeg 
+is getting a double echo when trying to pull an audio 
+stream. Perhaps getting pulseaudio working is the next 
+step. 
+
+
+
+ALSO NOTES: 
+
+1. Alsa daemon reads /etc/asoundrc and then cascades 
+   the configuration into ~/.asoundrc. If you are using 
+   anything other than a stock alsa configuration,  This 
+   means that system updates to alsa WILL reinstall a 
+   /etc/asoundrc and clobber your sound system. 
+
+2. The installer seems to also reset the /etc/group:audio
+   group deleting any users that have been added to it. 
+   So note that you will need to reconfigure that as well 
+   with a usermod <user> -G <userexistinggroups>,audio
+   (I need to write a tool for this?) 
+   
+3. The way that I prefer to deal with this problem is 
+   is to just delete /etc/asoundrc and only ever use 
+   use user level sound configurations. This should make 
+   sound configurations install with the user, but be 
+   selectable based on hardware. 
+
+4. My solution is to create hardware asound profiles in 
+   my windows manager interface directory, and then 
+   symlink that config into the user directory. 
+   In this fashion hardware profiles replicate to all 
+   users and the audio configuration can be changed on a 
+   per host basis. In my case I use fvwm, so I put my 
+   .asoundrc file in:   
+
+   ~/.fvwm/alsa/asoundrc.<hardwareprofilename>
+
+   and symlink it: 
+
+   ln -s ~/.fvwm/alsa/asoundrc.<hardwareprofilename> ~/.asoundrc
+
+
+
+HARDWARE NOTES: Toshiba toshiba-cd75d-a7310 
+
+   The audio jacks are umarked, but the headphones are close to the user 
+   and the mic is away from the user. 
+
+   The machine puts the main audio card on device 1. The default for 
+   asoundrc is to put it on device 0. The syntax is hw:<cardnumber>,<channel>
+
+TROUBLESHOOTING: 
+
+   first check that you are in group audio. If you are try playing a file 
+   with aplay from root. If it works it is probably a perms problem, if not 
+   it is probably a conf problem.  
+
+   the audio devices are in /dev/snd 
+
+   you can list them with aplay. 
+

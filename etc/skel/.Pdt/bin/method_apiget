@@ -1,0 +1,72 @@
+#! /bin/perl
+
+# this extracts the api from a factory and uses it to create
+# a list of setgets for the root class. This normalizes the API
+
+use Pdt::Method_APIGet;
+use Sort::Naturally qw(nsort);
+use strict;
+
+### random temp file generator
+
+my $rtfn_file;
+my $iscli;    # flag
+
+unless ( length( $ENV{'RTFN'} ) ) {
+   $iscli     = 1;
+   $rtfn_file = `rtfn`;
+   warn $rtfn_file;
+} else {
+   $rtfn_file = $ENV{'RTFN'};
+}
+
+###
+
+my $rootclass = shift @ARGV;
+my $class     = shift @ARGV;
+chomp $class;
+
+my $factory;
+
+my $block = "use $class\;\n";
+$block .= '$factory = ' . $class . '->new();' . "\n";
+
+# Note: factory has to actually load for this to work. 
+# check for factory crashes. 
+
+eval($block);
+
+my $api = $factory->api();
+delete( $api->{'__API__'} );
+my @M = nsort( keys(%$api) );
+
+my $T = Pdt::Method_APIGet->new();
+
+print "got to template";
+
+sub search { # (:M setget)
+   my $self = shift;
+   $self->{'search'} = $_[ 0 ] if ( defined $_[ 0 ] );
+   return $self->{'search'};
+}
+
+my $ostring;
+
+foreach (@M) {    #
+   $T->clear();
+   $T->append( 'rootclass_name' => $rootclass, 'method_name' => $_ );
+   $ostring .= $T->output();
+}
+
+open( RTFN, ">$rtfn_file" );
+
+print RTFN $ostring;
+
+close(RTFN);
+
+if ($iscli) {
+   open( RTFN, "$rtfn_file" );
+   while (<RTFN>) { print; }
+   close(RTFN);
+}
+

@@ -1,0 +1,4 @@
+Style "Fvwm*"           NoTitle, Sticky, WindowListSkip
+Style "*lock"           NoTitle, Sticky, WindowListSkip
+Style "xconsole"        NoTitle, Sticky, WindowListSkip, ClickToFocus
+Style "xload"           NoTitle, Sticky, WindowListSkip, ClickToFocus

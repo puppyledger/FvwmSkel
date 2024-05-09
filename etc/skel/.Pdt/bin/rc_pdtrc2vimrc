@@ -1,0 +1,45 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-53-59.EDT';
+
+# this program reads $HOME/.pdtrc and updates .vimpdtrc
+# which is the vimscript equivalent of .pdtrc. .vimpdtrc
+# is sourced prior to macro execution so that its
+# variables are real time.
+
+# evironment variables updated: anything matching ^PDT_
+# PATH, and PERL5LIB
+
+use Sort::Naturally qw(nsort);
+use Pdt::SourceEnv qw(:all);
+use strict;
+
+my $p;      # path
+my $p5l;    # perl5lib
+my %pdt;    # pdt variables
+
+&sourceenv("$ENV{'HOME'}/.pdtrc");
+
+$p   = $ENV{'PATH'};
+$p5l = $ENV{'PERL5LIB'};
+
+my @K = nsort( keys(%ENV) );
+
+open( VIMPDTRC, ">$ENV{'HOME'}/.vimpdtrc" ) || die("$ENV{'HOME'}/.vimpdtrc not writable");
+
+print VIMPDTRC &vimlet( "PATH",     $p );
+print VIMPDTRC &vimlet( "PERL5LIB", $p5l );
+
+foreach my $k (@K) {
+   next unless $k =~ /^PDT_/;
+   print VIMPDTRC &vimlet( $k, $ENV{$k} );
+}
+
+close(VIMPDTRC);
+
+sub vimlet {
+   my $s = ':let $' . $_[ 0 ] . ' = ' . "\"$_[1]\"\n";
+   return $s;
+}
+

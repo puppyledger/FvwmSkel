@@ -1,0 +1,70 @@
+#! /Skel/bin/perl
+
+# fvwm-newproject: get a string, make a directory set in projects 
+
+use Getopt::Std  ;
+use Tk ; 
+use X11::Xlib ; 
+
+my $fvwmcmd = $ENV{'XTOOLPATH'} . '/FvwmCommand' ; 
+my $xnps = $ENV{'XNEWPROJECTSCRIPT'} ; 
+
+# Default input strings   
+
+my $XUPP = $ENV{'XUSERPROJECTPATH'} . '/' ; # configured in $HOME/.usersetup
+my $XPV ; # written to $HOME/.xprojectvector 
+
+my $onceflag = 0 ; 
+
+# Figure out our geometry
+
+my $display = X11::Xlib->new() ;
+my $screenwidth = $display->DisplayWidth() ; 
+my $screenheight = $display->DisplayHeight() ; 
+my $windowwidth = 360 ; 
+my $windowheight = 20 ; 
+my $offsetwidth = int(($screenwidth - $windowwidth) / 2) ; 
+my $offsetheight = int(($screenheight - $windowheight) / 2) ; 
+
+my $offsetgeometry = $windowwidth . 'x' . $windowheight . '+' . $offsetwidth . '+' . $offsetheight  ; 
+
+# Construct GUI
+my $MW = MainWindow->new() ; # Tk MW 
+$MW->geometry($offsetgeometry) ; 
+my $WindowID = $MW->id() ; 
+
+my $L1 = $MW->Label(-justify => 'center', -textvariable => \$XUPP)->pack(-side => "left", -anchor => "n", -expand => '1', -fill => 'x'); 
+my $E1 = $MW->Entry(-textvariable => \$XPV, -width => 100)->pack(-side => "right", -anchor => "n");  
+
+$E1->focus(); 
+# $E1->selectionFrom(0) ; 
+# $E1->selectionTo(0) ; 
+
+$MW->bind('<KeyRelease-Return>' => \&doyes); 
+$MW->bind('<KeyRelease-Escape>' => \&dono); 
+
+&warp2me(\$onceflag) unless $onceflag ; 
+
+MainLoop;
+
+sub dono {
+	exit ; 
+}
+
+sub doyes {
+	chomp $XPV ; 
+	my $cmdblock = $xnps . " " . $XPV ; 
+	warn $cmdblock ; 
+	sleep 4 ; 
+	exec $cmdblock ; 
+	exit ; 
+}
+
+sub warp2me {
+	my $onceflag = shift ; 
+	my $warpblock = $fvwmcmd . ' \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'' ; 
+	warn $warpblock ; 
+	system ($warpblock) ; 
+	$$onceflag++ ; 
+}
+

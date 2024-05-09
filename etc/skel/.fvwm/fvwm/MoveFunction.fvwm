@@ -1,0 +1,39 @@
+# These functions were in the default .fvwm2rc, not sure what all of them do
+
+AddToFunc warp-or-run           I Next (AcceptsFocus CirculateHit $0) Iconify -1
++                               I Next (AcceptsFocus CirculateHit $0) Focus
++                               I None (AcceptsFocus CirculateHit $0) $1
+
+AddToFunc MailFunction          I Next (AcceptsFocus $0) Iconify -1
++                               I Next (AcceptsFocus $0) focus
++                               I None (AcceptsFocus $0) Exec $0 $1
+
+AddToFunc Move-or-Raise         I Raise
++                               M Move
++                               D Lower
+
+AddToFunc Move-or-Raise2        M Raise
++                               M Move
++                               D Lower
+
+AddToFunc Maximize-Func         C Maximize     0 100
++                               D Maximize     100 100
+
+AddToFunc Move-or-Iconify       I Raise
++                               M Move
++                               D Iconify
+
+AddToFunc Resize-or-Raise       I Raise
++                               M Resize
++                               D Lower
+
+AddToFunc Resize-or-Raise2      M Raise
++                               M Resize
++                               D Lower
+
+AddToFunc PrintFunction         I Raise
++                               I Exec xdpr -id $w
+
+AddToFunc Iconify-and-Raise     I Iconify
++                               I Raise
+

@@ -1,0 +1,25 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-51-18.EDT';
+
+#: run a command found in the current project executable directory
+
+use Pdt::SourceEnv qw(:all);
+use strict;
+
+# read any special environment variables we may have.
+# and run the following command
+
+my $PDTRC = $ENV{'HOME'} . "/" . '.pdtrc';
+sourceenv($PDTRC);
+
+chomp $ARGV[ $#ARGV ] if scalar(@ARGV);
+
+my $command = shift @ARGV;
+$command = join "", ( $ENV{'PDT_BIN_PATH'}, '/', $command );
+$command = join " ", ( $command, @ARGV );
+
+print $command ;
+
+# exec $command ;

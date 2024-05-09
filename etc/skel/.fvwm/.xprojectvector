@@ -1,0 +1,8 @@
+
+# XUSERPROJECTPATH comes from .usersetup. This variable 
+# is used by fvwm-newproject fvwm-vectorproject and scripts 
+# in $XSTARTPATH to provide a common vectoring platform for 
+# starting programs in the right directory. 
+
+export XPROJECTVECTOR=$XUSERPROJECTPATH/EXAMPLE-PROJECT
+

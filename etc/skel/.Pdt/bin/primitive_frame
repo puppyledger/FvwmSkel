@@ -1,0 +1,16 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-52-25.EDT'
+
+# NOTE: environment variables must be declared by a cbenv()  
+# function in the template, in order to be collated. 
+
+export login_entry_9_0_16='<TMPL_VAR NAME=login_entry_9_0_16>' 
+
+#: (:P f) 
+#: 
+#: Primitive for template based ascii forms.   
+
+pdt 'Pdt::Primitive_Frame'
+

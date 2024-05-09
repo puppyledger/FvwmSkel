@@ -1,0 +1,3 @@
+To use the minicom ports you need to add yourself to group dialout.  
+
+usermod -a -G dialout <useid>

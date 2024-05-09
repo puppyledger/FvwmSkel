@@ -1,0 +1,30 @@
+# White foreground dark gray background
+Colorset 1 fg #ffffff, bg #777782
+
+# White foreground medium gray background
+Colorset 2 fg #ffffff, bg #444449 
+
+# White forgeground, black background
+Colorset 3 fg White, bg Black 
+
+# Sky blue gradient and reverse
+Colorset 11 VGradient 20 rgb:b8/ce/bc rgb:5b/85/c0
+Colorset 12 VGradient 20 rgb:5b/85/d0 rgb:b8/ce/bc
+
+Colorset 23 RootTransparent, fg rgb:ff/ff/c4, bg darkgray
+
+# Forewindow 
+Style * HilightColorset 1
+
+# Backwindow
+Style * Colorset 2
+
+# Menus
+# MenuStyle * MenuColorSet 11 
+# MenuStyle * MenuColorSet 23 
+MenuStyle * MenuColorSet 3  
+
+# TitleBar
+# TitleStyle ColorSet 23 
+
+

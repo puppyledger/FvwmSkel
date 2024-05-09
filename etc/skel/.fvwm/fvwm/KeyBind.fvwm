@@ -1,0 +1,127 @@
+
+# Some of these bindings should be extendable 
+# with associated sounds. In that case they 
+# would run an exec that would return with 
+# a call to FvwmCommand.  
+
+# WindowsKey iconifies (pook) 
+Key Super_L A N IconifyAndWarp 
+
+# Control-WindowsKey destroys (crumble (total war crumble sound?))
+Key Super_L A C DestroyAndWarp 
+
+# Menu Key cycle layers (shush)
+Key Menu A N RaiseLower
+
+# ALT TAB warp to next window on the same page (silent)
+Key Tab A M Warp2Next 
+
+# f8 alt-f8, these are intended to make a pic-in-pic 
+# embedder, but the functionality is not there yet. It 
+# needs some work. 
+
+# Key F8 A N Function MyFreeze
+# Key F8 A M Function MyThaw 
+
+DestroyFunc Warp2Next 
+AddToFunc Warp2Next
++ I Next (CurrentPage, AnyScreen) WarpToWindow 50 2 
+
+DestroyFunc IconifyAndWarp
+AddToFunc IconifyAndWarp
++ I Iconify
++ I Prev (CurrentPage, AnyScreen) WarpToWindow 50 2 
+
+DestroyFunc DestroyAndWarp
+AddToFunc DestroyAndWarp
++ I Destroy
++ I Prev (CurrentPage, AnyScreen) WarpToWindow 50 2 
+
+
+# This is the bit is responsible for the StayOnTop 
+# functionality for the pic-in-pic. It isn't right 
+# yet. vvvvvvvvvvvvvv
+
+# + I ThisWindow (Layer 6) Layer
+# + I TestRc (NoMatch) Layer 0 6
+#
+
+DestroyFunc MyFreeze # to be integrated with vcanvas 
+AddToFunc MyFreeze
++ I ThisWindow (Layer 6) Layer
++ I TestRc (NoMatch) Layer 0 6
++ I ThisWindow WindowStyle Sticky
++ I ThisWindow WindowStyle !Title
++ I ThisWindow WindowStyle !Borders
++ I ThisWindow WindowStyle !Handles
++ I ThisWindow WindowStyle WindowListSkip
++ I UpdateStyles
+
+DestroyFunc MyThaw 
+AddToFunc MyThaw
++ I ThisWindow (Layer 6) Layer    
++ I TestRc (NoMatch) Layer 0 6    
++ I ThisWindow DestroyWindowStyle
++ I UpdateStyles
+
+### NavPad keybindings
+
+# NUMLOCK KEY BINDING
+Key Num_Lock A A NavPadToggle
+
+# DECLARE A VARIABLE
+SetEnv NAVTOGGLE "0" 
+
+# DECLARE FUNCTION
+DestroyFunc NavPadToggle
+AddToFunc NavPadToggle
++ I Test (EnvMatch NAVTOGGLE 1) SetEnv NAVTOGGLE "0"
++ I TestRc (!Match) SetEnv NAVTOGGLE "1"
++ I Test (EnvMatch NAVTOGGLE 1) Numpad2Nav
++ I TestRc (!Match) Numpad2Num
+
+# SUBROUTINE CONFIGURE NUMPAD
+DestroyFunc Numpad2Nav 
+AddToFunc Numpad2Nav
++ I Key KP_Home A N GotoPage 0 0  
++ I Key KP_Up A N GotoPage 1 0  
++ I Key KP_Prior A N GotoPage 2 0  
++ I Key KP_Left A N GotoPage 0 1
++ I Key KP_Begin A N GotoPage 1 1
++ I Key KP_Right A N GotoPage 2 1
++ I Key KP_End A N GotoPage 0 2
++ I Key KP_Down A N GotoPage 1 2
++ I Key KP_Next A N GotoPage 2 2
+
+# SUBROUTINE UNCONFIGURE NUMPAD
+DestroyFunc Numpad2Num 
+AddToFunc Numpad2Num
++ I Key KP_Home A A 
++ I Key KP_Up A A 
++ I Key KP_Prior A A 
++ I Key KP_Left A A 
++ I Key KP_Begin A A 
++ I Key KP_Right A A 
++ I Key KP_End A A 
++ I Key KP_Down A A 
++ I Key KP_Next A A 
+
+### IDE keybindings
+
+### NOTE: 
+# application/task specific keybindings below here should be created 
+# using set/unset bindings with FvwmCommand to prevent collisions. The 
+# most common ones will be left on by default.  
+
+# these are comment add/delete macros for vim, 
+# and should probably be implemented in .vimrc. 
+
+Key F12 A N Exec $[XTOOLPATH]/keypress-vicomment
+Key F12 A M Exec $[XTOOLPATH]/keypress-viuncomment
+
+# This is a universal F-key to script binder for one-off bindings. 
+
+Key F11 A N Exec $[XTOOLPATH]/fvwm-fkeybind
+
+
+

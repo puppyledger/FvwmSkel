@@ -1,0 +1,13 @@
+#! /bin/bash
+
+ip link set dev wlp1s0 down # set the interface down
+
+kill `cat /var/tmp/wpa_supplicant.pid` # turn of the wifi
+rm /var/tmp/wpa_supplicant.pid # remove the pid file for the wifi
+
+echo "_____________________________________________"
+
+ps -aux | grep wpa_supplicant
+ip link show wlp1s0
+
+

@@ -1,0 +1,46 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-56-24.EDT';
+
+# perltidy does a good job but it prangs line comments on
+# subroutines.  this corrects that.
+
+my $fn = shift;
+die("unable to open $fn") unless ( -r $fn && -w $fn );
+
+my $text;
+
+open( FN, "$fn" );
+
+while (<FN>) {    #
+   my $line = $_;
+
+   if ( $line =~ /^sub\s+\w+\s*\{\s*\#\s*/ ) {    # match whitespace deviations of of: "sub foo { # "
+
+      # whitespace match catches \n, so we have to remove it if present
+
+      my $lastchar = chop $line;
+
+      $line =~ s/^sub\s+(\w+)\s+\{\s*\#\s*/sub $1 \{ \# /;    # replace exactly with: "sub foo { # "
+
+      # then restore it.
+
+      $line .= $lastchar;
+
+      # and append the line to the writable file
+
+      $text .= $line;
+
+   } else {
+
+      $text .= $line;
+
+   }
+}
+
+close(FN);
+open( FN, ">$fn" ) || die("unable to overwrite $fn");
+print FN $text;
+close(FN);
+

@@ -1,0 +1,188 @@
+#! /usr/bin/perl
+# 
+# fvwm-execmenu: create fvwm menus from start scripts 
+# automatically. 
+#
+# menu scripts for FvwmSkel are named: <Menuname>.<selectname>.sh 
+# by passing a block of paths, multiple directories may be searched 
+# for files that are in like menus.  This allows for the culmination 
+# of system and user menu scripts to be rendered at the same time. 
+#
+# usage: fvwm-automenu -M <menuname> -p <dir1>:<dir2>:<dir2>  etc. 
+# 
+# the directories are searched, and the scripts are ordered 
+# alphanumerically. by selection name. 
+#
+
+use Cwd ;
+use Getopt::Std ;
+use Sort::Naturally qw(nsort) ; 
+
+use strict ;
+
+my $_DEBUG = 0 ; 
+
+my %OPTS ; 
+getopts('p:m:h', \%OPTS) ; # prefix, id 
+
+&dohelp if exists $OPTS{'h'} ; 
+my $menuname   ; 
+my $scriptpath ;
+my $localpath  ; 
+my $P = [] ;  # paths 
+
+die ('no paths provided') unless (length($OPTS{'p'})) ;
+
+@$P = split /\:/, $OPTS{'p'} ; 
+
+warn "PATHS: ", @$P if $_DEBUG ; # the block of paths passed by the user
+
+# validate and prune all passed directories. 
+
+for (my $n = 0; $n < scalar(@$P) ; $n++) {
+
+	# do a little sanity for stupid mistakes
+
+	chomp $P->[$n] ; 
+	$P->[$n] =~ s/[\/\s+]$//g;  # strip trailing slashes or spaces
+	$P->[$n] =~ s/^\s+//g;      # strip leading spaces
+
+	# prune tests
+
+	unless (-d $P->[$n]) {
+		# warn "not a directory: ", $P->[$n] ; 
+		splice(@$P,$n,1) ; 
+		$n-- ; 
+	} 
+
+
+}
+
+# now we read all of the files in all of our directories, test 
+# for a matching MenuName, and then fully qualify them.  
+
+my $M = {} ;  # the menu has a hash
+
+foreach my $p (@$P) {
+	opendir(EXED,$p) || warn ("failed to opendir: $p check perms.") ; 
+
+	my @fn = readdir EXED ; 
+
+	# prune loop
+
+	for (my $n = 0; $n < scalar(@fn) ; $n++) {
+
+		# get the fully qualified filename and 
+		# tokenize menu,selection,extension
+		
+		my $fqfn = join '/', ($p, $fn[$n]) ; 
+		my ($_m,$_s,$_x) = split(/\./,$fn[$n]) ; 
+
+		if (-d $fqfn) { # no directories
+			# warn "is a directory:", $fn[$n] ; 
+			splice(@fn,$n,1) ; 
+			$n-- ; 
+			next  ; 
+		}
+
+		if ($fn[$n] =~ /^\./) { # no hidden files
+			splice(@fn,$n,1) ; 
+			$n-- ; 
+			next ; 
+		}
+
+		unless (-x $fqfn ) {	# must be executable
+			warn "not executable:", $fn[$n] if $_DEBUG ; 
+			splice(@fn,$n,1) ; 
+			$n-- ; 
+			next  ; 
+		} 
+
+		unless ($_m eq $OPTS{'m'}) { # must match the menuname prefix provided
+			# warn "$fn[$n] does not match $OPTS{'m'}" ; 
+			splice(@fn,$n,1) ; 
+			$n-- ; 
+			next ; 
+		}  else {
+			warn "$fn[$n] matches $OPTS{'m'}\n\t $_s\n\t $M->{$_s}\n\n" if $_DEBUG ; 
+			$M->{$_s} = $fqfn ;  #store the key and value
+		}
+
+	}
+
+	closedir(EXED) ; 
+}
+
+
+my @menuhead  ; 
+my @menuline  ; 
+
+ @menuhead = domenuhead() ; 
+
+foreach my $k (nsort(keys %$M)) { 
+	warn "$k\n" if $_DEBUG ; 
+	push @menuline, domenuline($k, $M->{$k}) ; 
+}
+
+### PRINT IT 
+
+print @menuhead ; 
+print @menuline ; 
+print "\n\n" ; 
+
+### done. 
+
+sub domenuhead { # 
+	my $text = "\n\nDestroyMenu $OPTS{'m'}" . "\n" . "AddToMenu $OPTS{'m'}" ;
+	return $text ; 
+}
+
+sub domenuline { # make a simple callback line 
+	my $desc = shift ;
+	my $fn = shift ; 
+	my $text = "\n\+ \'\&" . $desc . "\' Exec $fn \&" ;  
+  	return $text ; 
+}
+
+sub dohelp { #
+	open ("__DATA__") ; 
+	while (<DATA>) {
+		print $_ ;
+	}
+	close(DATA) ; 
+	exit ; 	
+}
+
+__DATA__
+
+In FvwmSkeleton programs that are accessible from 
+menus are generally wrapped with scripts that can 
+manage the environment for the respective program. 
+
+These wrappers are typically just bash scripts, but 
+can be anything executable. The wrappers are named
+using a sortable format: 
+
+<MenuName>.<SelectionName>.[sh|pl|py|etc]
+
+fvwm-execmenu is called from the Fvwm2 PipeRead 
+command, typically in .fvwmrc or an included 
+fvwm config file. Like So: 
+
+PipeRead '$[XTOOLPATH]/fvwm-execmenu -m OfficeMenu -p $[XSTARTPATH]'
+
+In this case any script matching OfficeMenu will be included 
+in the menu.
+
+Usage:
+
+fvwm-execmenu -m <MenuName> -p [<path1:path2>...]
+
+All included paths will be searched for executables 
+named <MenuName> and verified that those files are 
+actually executable. At that point all executable 
+scripts will be sorted alphnumerically by <SelectionName>
+and the Fvwm commands required to generate the menu 
+will be spit out. 
+
+

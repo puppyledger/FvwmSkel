@@ -1,0 +1,8 @@
+#! /bin/bash
+
+# wrap libreoffice python with a delay so we can see the output in vi
+
+clear
+$XOFFICEPATH/python $1 
+sleep 30 
+

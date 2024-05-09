@@ -1,0 +1,10 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-49-36.EDT'
+
+
+export RTFN=`rtfn`
+vim $RTFN
+cat $RTFN
+

@@ -1,0 +1,14 @@
+#! /bin/bash 
+
+export VERSION='2018-04-10.04-46-25.EDT'
+
+# this exists to prevent path recursion in the .pdtrc file. 
+# it gets the exist paths, deletes the lib variable, then 
+# reassembles it from nothing. 
+
+source $HOME/.pdtrc  
+export PERL5LIB=''
+export PERL5LIB=`$PDT_PERL -e 'print join ":", @INC'` 
+export PERL5LIB="$PDT_LIB_PATH:$PDT_LIB:$PERL5LIB"
+echo $PERL5LIB
+

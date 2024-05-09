@@ -1,0 +1,29 @@
+
+# Resizes the window provided by w.id to a standardized size, plus room for the the 
+# titlebar. Then calls into fvwm to set an environment variable CANVAS_SIZE with 
+# the geometry string for the overlay target.  
+
+# a setque command grabs the geometry, a video file name, and a fkey number, and 
+# binds them together into a fvwm environment variable. Those environment variables 
+# are displayed cyclically in a bgterm so that the user has an active view of 
+# what is qued for display. When any such key is pressed, the command stored 
+# in the environment variable is run, which plays the video over the exact 
+# same space as the window that provided the canvas. 
+
+# So the work flow is, set the canvas size. Use some other windows to find 
+# the respective files and que them up on the cli. Use the record button 
+# on the canvas window to start recording, and f-key the qued videos 
+# into place 
+
+DestroyFunc Refresh_CanvasMenu
+AddToFunc Refresh_CanvasMenu
++ I DestroyMenu IconClickMenu 
++ I AddToMenu IconClickMenu
++ I + "Foo" Exec xmessage $[w.id]
++ I + "Bar" Exec $[XTOOLPATH]/setcanvas $[w.id]
+
+DestroyFunc Run_CanvasMenu
+AddToFunc Run_CanvasMenu
++ I Refresh_CanvasMenu 
++ I Menu IconClickMenu
+

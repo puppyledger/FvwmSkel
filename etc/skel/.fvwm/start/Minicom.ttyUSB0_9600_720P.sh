@@ -1,0 +1,10 @@
+#! /bin/bash 
+
+# see ~/.fvwm/minicom/README for details on how this works 
+
+$XSOUNDCMD $XSOUNDPATH/newwindow.wav & 
+rm ~/.minirc.dfl
+ln -s ~/.fvwm/minicom/minirc.ttyUSB0.9600 ~/.minirc.dfl
+
+/Skel/bin/urxvt -fn $XTERM_FONT_HUGE -fg yellow -bg $XTERM_DEFAULT_BG -title "Minicom 9600" -e minicom &
+

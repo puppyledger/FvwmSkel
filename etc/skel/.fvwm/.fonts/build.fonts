@@ -1,0 +1,5 @@
+#! /bin/bash 
+
+mkfontscale /Skel/Fvwm/.fonts
+mkfontdir   /Skel/Fvwm/.fonts
+

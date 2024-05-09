@@ -1,0 +1,178 @@
+#! /usr/bin/perl 
+
+# \#
+my $VERSION = '2018-04-10.04-44-07.EDT';
+
+use Getopt::Std;
+use Sort::Naturally qw(nsort);
+
+use strict;
+
+my %OPTS;
+getopts( 'hplx', \%OPTS );    # xterm mode
+
+# h: projects
+# p: projects
+# l: libs
+# x: exports
+
+&dohelp if $OPTS{'h'};
+my $pdtr = $ENV{'PDT_ROOT'};
+warn "PDTROOT: $pdtr";
+open( PDTD, "find $pdtr -maxdepth 2 -name .pdtenable |" );
+
+# three tables defining the important locations for ALL
+# types of values we care about.
+
+my %projectdir;
+my %projectlibdir;
+my %projectbindir;
+
+# timestamp table
+
+my %projectdirorder;     # these directories are sequenced by project ACTIVATE
+my %projectfileorder;    # these are the executables sequenced by project ACTIVATE
+my %projectbinorder;     # these are the executables sequenced by project ACTIVATE
+my %projectliborder;     # these are the libs sequenced by project ACTIVATE
+
+# here we make a keytable of the project directories
+# and their respective local libriaries
+
+while (<PDTD>) {
+   chomp $_;
+   $_ =~ s/\.pdtenable$//;
+   $_ =~ s/\/$//g;
+
+   my $prd = my $pld = my $pbd = $_;
+   $pld .= '/' . $ENV{'PDT_LIB_PATH'};
+   $pbd .= '/' . $ENV{'PDT_BIN_PATH'};
+
+   $projectdir{$prd}    = 1;
+   $projectlibdir{$pld} = 1;
+   $projectbindir{$pbd} = 1;
+}
+
+close(PDTD);
+
+# now we go through these directories, and find the most recently
+# activated project and sort the projects and the project directories
+# by activation date, most recent first.
+
+foreach my $d ( keys %projectdir ) {
+
+   # find each project in the active directory
+
+   # warn "FINDING $d" ;
+   # warn "find $d -maxdepth 1 -name \\*.pdt |"  ;
+
+   open( PDTP, "find $d -maxdepth 1 -name \\*.pdt |" ) || die("no find in our path?");
+
+   # pull the first line out of the project
+
+   while (<PDTP>) {
+      my $f = $_;
+      chomp $f;
+      open( TFN, $f ) || next;
+      my $terp = <TFN>;    # get the first interpeter line
+      my $vers = <TFN>;    # get the second line which contains the version
+      close(TFN);
+      next unless $vers =~ /VERSION/;
+      my $timestamp = version2pair($vers);
+
+      # record the project path and executable
+      # file by timestamp.
+
+      $projectdirorder{$timestamp}  = $d;
+      $projectfileorder{$timestamp} = $f;
+      $projectliborder{$timestamp}  = $d . '/' . $ENV{'PDT_LIB_PATH'};
+      $projectbinorder{$timestamp}  = $d . '/' . $ENV{'PDT_BIN_PATH'};
+
+   }
+
+   close(PDTP);
+
+}
+
+# here we get the timestamps in reverse chrono order. This
+# reflects only projects with .pdt files in them.
+
+my @orderkey = reverse( nsort( keys %projectfileorder ) );
+
+# the very first instance is the currently active project
+
+my $pdtactive    = $projectfileorder{ $orderkey[ 0 ] };    # the executable we are editing
+my $pdtactivelib = $projectliborder{ $orderkey[ 0 ] };     # the lib path where we are editing executables
+
+my %ordereduniq;                                           # truth table
+my @orderedlib;                                            # going to become PERL5LIB
+my @orderedbin;                                            # going to become PATH
+
+# Now we have all the projects with working activated programs
+# so we unique them in order into a list.
+
+foreach my $o (@orderkey) {
+   unless ( exists $ordereduniq{ $projectdirorder{$o} } ) {
+      push @orderedlib, $projectliborder{$o};
+      push @orderedbin, $projectbinorder{$o};
+   }
+
+   $ordereduniq{ $projectdirorder{$o} } = 1;
+}
+
+# but we still have project directories with bins and libs that
+# are complete and have no working files. So we add them back
+# in normal file directory order.
+
+foreach my $k ( keys %projectdir ) {
+   unless ( exists $ordereduniq{$k} ) {
+      my $thislib = $k . '/' . $ENV{'PDT_LIB_PATH'};
+      my $thisbin = $k . '/' . $ENV{'PDT_BIN_PATH'};
+      push @orderedlib, $thislib;
+      push @orderedbin, $thisbin;
+   }
+}
+
+# And now we can assemble the path search order in the order of
+# most recently activated, followed by normal directory order.
+
+my $perlfivelib = join ':', @orderedlib;
+my $pdtpath     = join ':', @orderedbin;
+
+if ( defined $OPTS{'x'} ) {
+   my $xb;    # export block
+   $xb .= "export PDT_PATH=$pdtpath\n";
+   $xb .= "export PDT_ACTIVE=$pdtactive\n";
+   $xb .= "export PDT_LIB_PATH=$pdtactivelib\n";
+   $xb .= "export PERL5LIB=$perlfivelib\n";
+   print $xb ;
+} elsif ( defined $OPTS{'p'} ) {
+   print $pdtactive ;
+} elsif ( defined $OPTS{'l'} ) {
+   print $pdtactivelib ;
+} else {
+   &dohelp;
+   exit;
+}
+
+sub version2pair { # extract the timestamp from the version line
+   my $version = shift;
+   my @v = split( /[\'\"]/, $version );
+   $version = $v[ 1 ];
+   return $version;
+}
+
+sub dohelp {
+   while (<DATA>) { print $_ ; }
+   exit;
+}
+
+__DATA__
+
+# interrogate the directory $ENV{'PDT_ROOT'} and find 
+# pdt project directories and project scripts. 
+
+# h: help  
+# p: return the active project  
+# l: return the active lib path 
+# x: return environment exports suitible for bash eval()  
+

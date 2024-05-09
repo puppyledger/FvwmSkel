@@ -1,0 +1,164 @@
+#! /bin/bash
+
+# NOTE: X...PATH and X...CMD variables are defined in .xinitrc
+
+# This file defines user configurable 
+# setup parameters for the skeleton 
+# environment. Back this up before 
+# making modifications.
+
+# This is the directory where I keep my projects
+
+export XUSERPROJECTPATH=$HOME/Project
+
+# this is the program that automatically sets up 
+# the subdirectory tree for my projects. To  
+# change, copy and modify the script, and then 
+# change this variable. The GUI get script is 
+# $XTOOLPATH/fvwm-getnewproject 
+
+export XNEWPROJECTPSCRIPT=$XTOOLPATH/fvwm-newproject.sh 
+
+# set the initial project vector this file will usually contain 
+# a variable that can be used by scripts to determine the current 
+# working project. 
+
+source $HOME/.xprojectvector
+
+# Set up some rxvt stuff here 
+# these are the default directories 
+# searched for user defined fvwm extensions.  
+# to add extensions or files create the 
+# directories you see listed here, and populate  
+# with your own scripts or files depending on 
+# the application. Fvwm should pick them 
+# up and populate the appropriate menus 
+# automatically. See the examples in 
+# $HOME/.fvwm/start and $HOME/.fvwm/.wallpaper 
+# for examples.  
+
+# export XUSERSTARTPATH=$HOME/.xuserstart
+# export XUSERMACROPATH=$HOME/.xusermacro
+# export XUSERICONPATH="$HOME/.xusericon"
+# export XUSERICONPATH="$HOME/.xuserfont"
+# export XUSERSOUNDPATH="$HOME/.xusersound"
+# export XUSERWALLPAPERPATH="$HOME/.xuserwallpaper"
+
+# Set up some rxvt stuff here 
+
+export XTERM_LINEBUF=2000
+
+# our default size is vt102 size. Some programs 
+# will not detect terminal sizes correctly and 
+# just assume vt102. It is recommended to use CLI 
+# options with the terminal itself from macro scripts
+# to create larger terminals, and leave this vt102 
+
+export XTERM_SIZE_DEFAULT=80x24
+
+# a green on black terminal for low eye strain
+
+export XTERM_DEFAULT_FG="green"
+export XTERM_DEFAULT_BG="black"
+
+# a different color set for diagnostics windows
+
+export XTERM_DIAG_FG="black"
+export XTERM_DIAG_BG="white"
+
+# background terminals are fully ghosted,
+# and will appear as floating text. This 
+# is the color of that text. 
+
+export XTERM_BGTERM_FG="grey"
+
+# special terminal fonts are not yet supported. 
+# eventually they will go here. 
+
+export XTERM_FONT_HUGE="-nil-profont-medium-r-normal--29-290-72-72-c-160-iso8859-1"
+export XTERM_FONT_BIG="-nil-profont-medium-r-normal--22-220-72-72-c-120-iso8859-1"
+export XTERM_FONT_MEDIUM="-nil-profont-medium-r-normal--17-170-72-72-c-140-iso8859-1"
+export XTERM_FONT_SMALL="-nil-profont-medium-r-normal--15-150-72-72-c-70-iso8859-1"
+export XTERM_FONT_TINY="-nil-profont-medium-r-normal--12-120-72-72-c-60-iso8859-1"
+export XTERM_FONT_WIERD=""
+
+# export XTERM_FONT_DEFAULT=$XTERM_FONT_BIG
+
+export XTERM_FONT_DEFAULT=9x15bold
+
+# some popup windows have a configurable lag time 
+
+export PAUSE_SHORT=5 
+export PAUSE_LONG=7 
+
+### these are already set in bashrc, 
+### localizing them here will overwrite 
+### the defaults. 
+
+# this prepends to the existing path 
+export PATH="./:$HOME/bin:/home/www/bin:/$PATH"
+
+# localize my manpath
+# export MANPATH=""
+
+# localize my default editor
+# export EDITOR=""
+
+### The size of the window pager: 
+### this is a compromise between 
+### 16x9 and 4x3 since we should like 
+### to run on various displays without 
+### having to change things. 
+
+export PAGER_GEOMETRY=128x96-0+0
+# export PAGER_GEOMETRY=144x108-0+0
+# export PAGER_GEOMETRY=160x120-0+0
+
+### The iconbox stacks top to bottom  
+### right to left adjacent to the pager
+### with maximum density. This gives  
+### the best likelyhood that an icon 
+### will not be covered by a window
+
+export ICONBOX_GEOMETRY=514x96-129+0
+# export ICONBOX_GEOMETRY=514x108-145+0
+# export ICONBOX_GEOMETRY=514x120-161+0
+
+### window manager sounds
+
+export SOUND_SHADE="$XSOUNDPATH/shade.wav"
+export SOUND_WARP="$XSOUNDPATH/iconifywarp.wav"
+export SOUND_ICONIFY="$XSOUNDPATH/iconifywarp.wav"
+export SOUND_NEWWIN="$XSOUNDPATH/newwindow.wav"
+export SOUND_LOGIN="$XSOUNDPATH/login.wav" 
+export SOUND_LOGOUT="$XSOUNDPATH/logout.wav" 
+export SOUND_STARTRECORD="$XSOUNDPATH/startrecord.wav" 
+export SOUND_STOPRECORD="$XSOUNDPATH/stoprecord.wav" 
+export SOUND_DEV_MIC="front_mic" # Your MIC can be found with asound -L
+
+### color based icon paths (we are using gcons here) 
+
+export ICON_COLOR_1="textured"
+export ICON_COLOR_2="textured"
+export ICON_COLOR_3="green"
+export ICON_COLOR_4="red"
+export ICON_COLOR_5="orange-yellow"
+
+### icon files
+
+export ICON_DEFAULT="$ICONPATH/$ICON_COLOR_1/disc.png"
+export ICON_XTERM="$ICONPATH/$ICON_COLOR_1/screen.png"
+export ICON_XTERMABROAD="$ICONPATH/$ICON_COLOR_2/screen.png"
+export ICON_CONSOLE="$ICONPATH/$ICON_COLOR_5/screen.png"
+export ICON_WEB="$ICONPATH/$ICON_COLOR_1/globe.png"
+export ICON_EMAIL="$ICONPATH/$ICON_COLOR_1/email.png"
+export ICON_ACCOUNTING="$ICONPATH/$ICON_COLOR_1/dollar.png"
+export ICON_SPREADSHEET="$ICONPATH/$ICON_COLOR_1/pie-chart.png"
+export ICON_WORDPROC="$ICONPATH/$ICON_COLOR_1/edit.png"
+export ICON_MUSIC="$ICONPATH/$ICON_COLOR_1/music-node.png"
+export ICON_ART="$ICONPATH/$ICON_COLOR_1/leaves.png"
+export ICON_CAD="$ICONPATH/$ICON_COLOR_1/processing.png"
+export ICON_VPN="$ICONPATH/$ICON_COLOR_1/lock.png"
+export ICON_FILEMGR="$ICONPATH/$ICON_COLOR_1/tree.png"
+export ICON_HUMAN="$ICONPATH/$ICON_COLOR_1/agent.png"
+

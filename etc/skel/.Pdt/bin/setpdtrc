@@ -1,0 +1,315 @@
+#! /usr/bin/perl 
+
+# setpdtrc: The .pdtrc manager. This program is responsible
+# for adding new projects, building projectdirectory trees,
+# changing project vectors, and pushing GIT commits.  setpdtrc
+# is called from many places, including project, viexec, and
+# vimod.
+
+# see setpdtrc -h for help.
+
+use Bash::Sugar ; 
+use Cwd qw(cwd) ;
+use File::Path qw(make_path remove_tree);
+use Getopt::Std;
+use Sort::Naturally qw(nsort);
+use Pdt::Help::Setpdtrc;
+use Pdt::Pdtrc ;
+
+use strict;
+
+	my $_USER = $ENV{'USER'} ; 
+	my $_GROUP = $ENV{'PDT_GROUP'} ; 
+	$_GROUP = 'users' unless (length $_GROUP) ; 
+	my $_MODE = $ENV{'PDT_MODE'} ; 
+	$_MODE = 0755 unless (length $_MODE) ; 
+
+
+my %OPTS;
+getopts( 'p:idguh', \%OPTS );    # project init directories initializegit UpdateandSend help
+
+my $didsomething = 0;            # help unless we did something flag.
+
+my $BSUGAR = Bash::Sugar->new() ; 
+$BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc") if ( -e "$ENV{'HOME'}/.pdtrc" );
+
+umask( $ENV{'PDT_UMASK'} ) if ( length( $ENV{'PDT_UMASK'} ) );
+
+&dohelp  if defined $OPTS{'h'};
+&doinit  if defined $OPTS{'i'};
+&doset   if length( $OPTS{'p'} );
+&dodir   if defined( $OPTS{'d'} );
+&doexist if defined( $OPTS{'e'} );
+
+if ( defined( $OPTS{'g'} ) ) {
+   &dogit;
+   &doadd;
+   &dosend;
+}
+
+if ( defined( $OPTS{'u'} ) ) {
+   &doadd;
+   &dosend;
+}
+
+die("See: setpdtrc -h") unless $didsomething;
+
+sub doexist {
+}
+
+sub doset { # 
+   # if the directory does not exist, prompt.
+
+   print "Doset Project: $ENV{'PDT_ROOT'}/$OPTS{'p'}\n" ;
+
+   unless ( -d "$ENV{'PDT_ROOT'}/$OPTS{'p'}" ) {
+
+      print "Project: $ENV{'PDT_ROOT'}/$OPTS{'p'} does not exist, create? [y/N]";
+      my $yn = <STDIN>;
+      die('aborting') unless $yn =~ /y/i;
+
+      mkdir("$ENV{'PDT_ROOT'}/$OPTS{'p'}");
+   }
+
+   # write the pdtrc with the newly selected project.
+
+   my $T = Pdt::Pdtrc->new( 'pdt_active' => $OPTS{'p'} );
+
+   print "Writing Pdtrc for Project: $ENV{'PDT_ROOT'}/$OPTS{'p'}\n" ;
+
+   open( PDTRC, ">$ENV{'HOME'}/.pdtrc" ) || die('.pdtrc not writable');
+
+   print $T->output();
+
+   print PDTRC $T->output();
+   close(PDTRC);
+
+   $BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+
+   print "current project: $ENV{'PDT_ACTIVE'}\n";
+   &_create_scm_path;
+
+   $didsomething++;
+}
+
+sub _create_scm_path {
+   mkdir( $ENV{'PDT_SCM_DIR'} )  unless ( -d $ENV{'PDT_SCM_DIR'} );
+   mkdir( $ENV{'PDT_SCM_PATH'} ) unless ( -d $ENV{'PDT_SCM_PATH'} );
+   mkdir( $ENV{'PDT_BIN_PATH'} ) unless ( -d $ENV{'PDT_BIN_PATH'} );
+   mkdir( $ENV{'PDT_LIB_PATH'} ) unless ( -d $ENV{'PDT_LIB_PATH'} );
+
+   open( FLAGFILE, ">$ENV{'PDT_FLAG_FILE'}" );
+   print FLAGFILE "This file flags the directory as pdt enabled. Do not delete.";
+   close(FLAGFILE);
+
+   print "$ENV{'PDT_SCM_DIR'}\n";
+   print "$ENV{'PDT_SCM_PATH'}\n";
+   print "$ENV{'PDT_BIN_PATH'}\n";
+   print "$ENV{'PDT_LIB_PATH'}\n";
+}
+
+sub dodir { # 
+   $BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+
+   open( PDTDIR, "$ENV{'PDT_DIR'}" ) || die("no .pdtdir file present.");
+
+
+
+   my $mkall = 0;
+
+   print "Setting up directories from .pdtdir :\n\n";
+
+   while (<PDTDIR>) {
+      chomp $_;
+      $_ =~ s/\#.*//g;        # no comments
+      $_ =~ s/[\s\/]*$//g;    # no trailing whitespace or slash
+      $_ =~ s/^[\s\/]*//g;    # no preceding spaces or slashes
+
+      if ( length($_) ) {
+
+         my $d = $ENV{'PDT_ROOT'} . '/' . $ENV{'PDT_ACTIVE'} . '/' . $_;
+
+         unless ( -d $d ) {
+            my $yn;
+            unless ($mkall) {
+               print "$d does not exist, create? [Y/n/a]";
+               $yn = <STDIN>;
+               print "$d\n" if $yn =~ /a/i;
+            } else {
+               print "$d\n";
+               make_path($d, 'user' => $_USER, 'group' => $_GROUP, 'mode' => $_MODE);
+            }
+
+            unless ( $yn =~ /n/i ) {
+               print "$d\n";
+               mkdir($d);
+            }
+
+            $mkall = 1 if $yn =~ /a/i;
+         }
+      } else {
+         next;
+      }
+   }
+
+   $didsomething++;
+}
+
+sub doinit { # write an initial example .pdtrc
+
+   my $T = Pdt::Pdtrc->new( 'pdt_active' => 'EXAMPLE' );
+
+   open( PDTRC, ">$ENV{'HOME'}/.pdtrc" ) || die('.pdtrc not writable');
+   print PDTRC $T->output();
+   close(PDTRC);
+
+   $BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+   print "\nexample .pdtrc installed.\n";
+
+   $didsomething++;
+}
+
+sub dogit { # initialize a git project
+   $BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+   print "Project: $ENV{'PDT_ACTIVE'}\n";
+
+   print "Are you using a remote master repo like github? [Y/n] \n";
+   my $gyn = <STDIN>;
+   chomp $gyn;
+
+   my $r;
+
+   unless ( $gyn =~ /n/i ) {
+
+      print "\nIf you have not yet created your remote\nmaster repo, you may break out with \^C and do so now.\n";
+
+      my $U = $ENV{'PDT_GIT_USER'};
+      $U = $ENV{'USER'} unless ( length($U) );
+
+      print "\ngithub or master repo username: [$U]";
+      my $u = <STDIN>;
+      chomp $u;
+      $u = $U unless ( $u =~ /\w+/ );
+
+      my $E = $ENV{'PDT_GIT_EMAIL'};
+      $E = $ENV{'USER'} . "\@" . $ENV{'HOSTNAME'} unless ( length($E) );
+      print "\ngithub or master repo email address: [$E]";
+      my $e = <STDIN>;
+      chomp $e;
+      $e = $E unless ( $e =~ /\w+/ );
+
+      my $R = 'https://github.com/' . $u . '/' . $ENV{'PDT_ACTIVE'};
+      print "\ngithub or master repo path: [$R]";
+      $r = <STDIN>;
+      chomp $r;
+      $r = $R unless ( length($r) );
+
+      print "\n set git globals? [Y/n]\n\tuser:$u\n\temail:$e\n\trepo:$r\n";
+      my $yn = <STDIN>;
+
+      unless ( $yn =~ /n/i ) {
+         my $ublock = "git config --global user.name \"$u\"";
+         system($ublock);
+
+         my $eblock = "git config --global user.email \"$e\"";
+         system($eblock);
+
+         my $sblock = "git config --global core.symlinks true";
+         system($sblock);
+
+         my $bblock = "git config --global http.postBuffer 157286400"; 
+         system($bblock);
+      }
+   }
+
+   # here is the standard init stuff.
+
+	my $pdir = $ENV{'PDT_GIT_DIR'} ; 
+
+   system("git -C $pdir") ;
+   system("git -C $pdir init") ;
+   system("git -C $pdir add .") ;
+   system("git -C $pdir commit") ;
+
+   # here we ship the stuff to the master repo.
+
+   unless ( $gyn =~ /n/i ) {
+
+      print "adding origin configuration\n";
+      print "git -C $pdir remote add origin \'$r\'";
+
+      # system("git -C $pdir remote add origin \'$r\'") ;
+      print "Doing initial clone from master. $ENV{'PDT_SCM_DIR'} Continue? [Y/n] \n";
+      my $yn = shift;
+
+      unless ( $yn =~ /n/i ) {
+         system("git -C $pdir clone $ENV{'PDT_GIT_REPO'}");
+      }
+   }
+
+   &_create_scm_path;
+
+   print "git initialization complete.\n";
+}
+
+sub doadd { # 
+	print "\n____________________________________\n\n" ; 
+	print "Using GIT params:\n"  ; 
+	open FOO, ("git config --list |") ; 
+
+	while(<FOO>) {
+		print $_ ;  
+	}
+
+	my $pdir = $ENV{'PDT_GIT_DIR'} ; 
+
+   print "git -C $pdir add --all\n" ;
+   print "git -C $pdir commit --all\n" ;
+
+	print "____________________________________\n" ;
+	sleep 1 ; 
+
+   system("git -C $pdir add --all");
+   system("git -C $pdir commit --all");
+}
+
+NOTE: 
+
+# github added tokens. We are using classic tokens here 
+# which requires a token to be generated on github 
+# and the associated value brought into Pdt::Pdtrc 
+# as PDT_GIT_TOKEN
+# 
+# see youtube.com/watch?v=ePCBulQLAUc
+
+sub dosend {
+	print "\n____________________________________\n\n" ; 
+	my $pdir = $ENV{'PDT_GIT_DIR'} ; 
+
+	print "Sending GIT commands:\n"  ; 
+
+	my $tcmd = "git remote set-url origin https://" 
+		. $ENV{'PDT_GIT_TOKEN'} 
+		. '@github.com/' 
+		. $ENV{'PDT_GIT_USER'} . '/' 
+		. $ENV{'PDT_ACTIVE'} ; 
+
+	print "$tcmd\n" ; 
+	system($tcmd) ; 
+
+   print "git -C $pdir push origin main\n";
+
+   system("git -C $pdir push origin main");
+
+   # system("git -C $pdir push");
+
+	print "____________________________________\n" ;
+	sleep 1 ; 
+}
+
+sub dohelp {
+   my $T = Pdt::Help::Setpdtrc->new();
+   print $T->output();
+   exit;
+}
+

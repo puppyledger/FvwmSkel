@@ -1,0 +1,33 @@
+##################### CREDITS: ####################### 
+
+Wallpapers: 
+	morguefile.com 
+	widewallpapers.com 
+	widewallpapers.ru 
+
+Audio: 
+	(Please advise, I forgot where these came 
+	from, but I believe that are all open 
+	source) 
+
+Icons: 
+	GCONS (open source icons)
+
+Fonts: 
+	(please advise, I forgot where these came from, 
+	but I believe they are all open source)
+
+FvwmSkel has wrappers to start the following apps: 
+	LibreOffice
+	Code::Blocks
+	Firefox 
+	Opera
+	FFMEG
+	QIV 
+	Blender
+	Audacity
+	alsamixer
+
+##################### END CREDITS: ####################
+
+

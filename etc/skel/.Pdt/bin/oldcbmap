@@ -1,0 +1,112 @@
+#! /usr/bin/perl
+
+#: generate a callback map for methods in the current class.
+#: requires: $ENV{'LASTEDITFILE'} be defined prior to calling.
+#: LASTEDITFILE is generally set in .vimrc as part of the macro 
+#: that runs this program. It reflects the currently edited file. 
+#:
+#: If the environment variable RTFN is defined, we write to the
+#: named file instead of STDOUT.
+
+use Getopt::Std;
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Bash::Sugar ; 
+use Pdt::Cbmap;
+use strict;
+
+my $_DEBUG = 1 ; 
+
+my %OPTS;
+getopts( 'c:h', \%OPTS );
+
+&dohelp if $OPTS{'h'} ;
+
+# get our IDE environment variables
+
+my $BSUGAR = Bash::Sugar->new(); 
+$BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn off warnings (better screen transitions)
+
+# local $SIG{__WARN__} = sub {};
+
+# the name of the executable is used in the template
+
+my $execname = $0;
+$execname =~ s/^.*\///g;
+
+if ($_DEBUG) { warn "exename: $execname" ; sleep 1 ; }
+
+my $doc    = Pdt::Cbmap->new();    # the template handle
+
+my $eclass = $BSUGAR->seeclass($execname); # get the list of classes to process Pdt::SourceEnv
+my @Eclass = ($eclass); #  this seems unneccessary, but I fathom there was a reason 2024:37:27
+
+my $OUTFH  = rtfnorstdout();       # get a writable filehandle Pdt::Sourceenv
+
+# avoid duplication with a collision table
+
+my %COLLISION;
+
+# the name of the property we store callbacks in.
+
+my $mapname = 'cbmap';
+
+# accumulators
+
+my @mapstatement;
+
+die('no classes defined') unless scalar($eclass);
+
+if ($_DEBUG) { warn "Eclass: @Eclass "  ; sleep 1 ; }
+
+my $n = 0;
+
+foreach my $editclass (@Eclass) {
+   chomp $editclass;
+
+   my $fn    = $ENV{'PDT_LIB_PATH'} . "/" . $BSUGAR->class2fn($editclass);    # get the filename for the class
+
+	if ($_DEBUG) { warn "filename: $fn "  ; sleep 1 ; }
+
+   my @mlist = $BSUGAR->seemethod($fn); # read thefile and get all the methods.
+
+   foreach (@mlist) {
+      next if $_ =~ /^new/;          # ignore constructors
+      next if $_ =~ /^cb/;           # specific to the CB class. cb's are API exports.
+      next if $_ =~ /^callback/;     # same as above
+      next if $_ =~ /^do/;           # do's are local
+      next if $_ =~ /^_/;            # _'s are private
+      chomp;
+
+      my $checkvalue = $_;           # make a copy for collision checking.
+
+      my $foo = '$self->{\'' . $mapname . '\'}->{\'' . $_ . '\'} = sub { shift ; return $self->' . $_ . '(@_) ; }' . ';';
+
+      if ($n) {                      # included the imported class in the comment if imported.
+         $foo = $foo . ' #' . "\t" . $editclass;
+      }
+
+      # flag to avoid duplicates.
+
+      push( @mapstatement, $foo ) unless $COLLISION{$checkvalue};
+      $COLLISION{$checkvalue} = 1;
+
+   }
+
+   $n++;
+}
+
+@mapstatement = nsort(@mapstatement);
+my $bar = join "\n\t", @mapstatement;
+
+$doc->append(
+   'execname'     => $execname,
+   'mapname'      => $mapname,
+   'mapstatement' => $bar
+);
+
+print $OUTFH $doc->output();
+print $OUTFH "\n";
+

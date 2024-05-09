@@ -1,0 +1,28 @@
+#! /home/x1/.fvwm/bin/perl
+
+#
+# Pass through script for FVWM environment variables. Since there is not 
+# a good (or at least well documented)  way to reach into the FVWM 
+# memory space, we use this to pass variables. We tell FVWM to run a 
+# script, with the variable encapsulated. This command takes 1 
+# argument which a command string with the environment variable 
+# placed in the string as $<VAR> Example: fvwm-passenv 'xmessage $FOO bar'  
+# will run xmessage with $FOO swapped out with FVWM's environment 
+# variable FOO 
+# 
+
+my $commandstring = shift ; 
+chomp $commandstring      ; 
+
+my $ev = $commandstring ; 
+$ev =~ s/^.*\$(\w+)\s+.*$/$1/ ; # extract the variable 
+
+my $ev_fvwm = $ev     ; # copy it and convert it to its fvwm friendly equivilant
+$ev_fvwm =~ s/^/\$\[/ ; 
+$ev_fvwm =~ s/$/\]/   ; 
+
+$commandstring =~ s/\$$ev/$ev_fvwm/g ; 
+
+## FvwmCommand 'Test (EnvIsSet FOO) Exec xmessage $[FOO]'
+my $block = 'FvwmCommand ' . "\'" . "Test \(EnvIsSet $ev\) " . "Exec $commandstring" . "\'" ; 
+system($block) ; 

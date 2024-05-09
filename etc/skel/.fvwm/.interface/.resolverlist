@@ -1,0 +1,21 @@
+
+# This is a public DNS server list
+
+http://pcsupport.about.com/od/tipstricks/a/free-public-dns-servers.htm
+
+# our dynamic DNS generation system 
+
+RESOLVER1="199.38.183.247" 
+RESOLVER2="209.177.157.196" 
+
+# googles DNS servers: 
+
+8.8.8.8 
+8.8.4.4 
+
+# Level 3s DNS servers 
+
+209.244.0.3 
+209.244.0.4 
+
+

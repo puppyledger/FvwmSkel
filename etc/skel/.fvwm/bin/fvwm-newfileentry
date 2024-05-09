@@ -1,0 +1,117 @@
+#! /Skel/bin/perl
+
+# Get a fully qualified directory or filename
+# -p path, -g geometry -w revertwindowid  -h help
+#
+
+BEGIN { 
+        my $defaultlibpaths = $ENV{"PERL_PATHMODULES"} ; 
+        eval($defaultlibpaths)  ; 
+        die $@ if $@ ; 
+} 
+
+use Cwd ; 
+use Tk ; 
+use Tk::PathEntry ; 
+use FVWM::Module::Tk ; 
+use Getopt::Std ; 
+use X11::Xlib ; 
+
+# STATICS
+my $offsetgeometry ; 
+my $path ; 
+my $driftx = '+200' ; # menu offset  x (eventually integrate into CLI) 
+my $drifty = '+2'   ; # menu offfset y
+
+my %OPTS ;
+getopts('p:g:w:h', \%OPTS) ; # message,geometry,help 
+
+# print help if requested
+&dohelp if defined $OPTS{'h'} ; 
+
+if ($OPTS{'g'}) { # get users geometry string if supplied
+        $offsetgeometry = $OPTS{'g'} ; 
+} else { # use a default if not
+        # Figure out our geometry
+        my $display = X11::Xlib->new() ;
+        my $screenwidth = $display->DisplayWidth() ; 
+        my $screenheight = $display->DisplayHeight() ; 
+        my $windowwidth = 200 ; 
+        my $windowheight = 40 ; 
+        my $offsetwidth = ($screenwidth - $windowwidth) / 2 ; 
+        my $offsetheight = ($screenheight - $windowheight) / 2 ; 
+        $offsetgeometry = $windowwidth . 'x' . $windowheight . '+' . $offsetwidth . '+' . $offsetheight  ; 
+}
+
+die ("usage: fvwm-entry -p <path> ") unless defined $OPTS{'p'} ; 
+
+$path = $OPTS{'p'} ; 
+
+$path =~ s/\/$//g ; # loose trailing slash if one
+$path =~ s/$/\//  ; # put one back
+
+my $onceflag  = 1 ; 
+
+my $MW = MainWindow->new() ; # Tk MW
+$MW->geometry($offsetgeometry)   ;
+my $WindowID = $MW->wrapper->[0] ;
+
+$catchreturn = 0 ; 
+
+my $PE1 = $MW->PathEntry(# what we came for 
+	-driftx => $driftx, 
+	-drifty => $drifty, 
+	-dircolor => 'blue', 
+	-width => '80', 
+	-textvariable => \$path, 
+	-initialdir => $path
+)->pack() ; 
+
+$PE1->focus() ; 
+
+$MW->bind('<KeyRelease-Return>' => \&dosave) ; 
+$MW->bind('<KeyRelease-Escape>' => \&docancel) ; 
+&warp2me if $onceflag ; 
+$onceflag = 0 if $onceflag ; 
+
+# print $WindowID ;
+
+MainLoop;
+
+sub dosave {
+	print $path ; 
+	&warpaway ; 
+	exit ; 
+}
+
+sub docancel {
+	&warpaway ; 
+	exit ; 
+}
+
+sub warp2me {
+	my $warpblock = 'FvwmCommand \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'' ; 
+	system ($warpblock) ; 
+}
+
+sub warpaway { # warp back to the calling window
+        if ($OPTS{'w'} =~ /\d+/) {
+                my $warpblock = 'FvwmCommand \'WindowID ' . $OPTS{'w'} . ' WarpToWindow 50 2\'' ; 
+                system ($warpblock) ;
+        }
+}
+
+sub dohelp { # 
+        while (<DATA>) { print $_ ;  }
+        exit ; 
+}
+
+__DATA__
+
+fvwm-pathentry: do something with a directory path:  
+
+-p <path> the start path 
+-g <geometrystring> format: <windowwidth>x<windowheight>+<offsetwidth>+<offsetheight>  
+-w windowid (window to warp back to)
+-h help
+

@@ -1,0 +1,7 @@
+#! /Skel/bin/perl
+
+# all this does, is wait for a return. It is used to hold xterm -e calls open 
+
+my $foo = <STDIN> ; 
+exit ; 
+

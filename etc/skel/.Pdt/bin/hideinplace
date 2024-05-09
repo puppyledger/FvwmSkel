@@ -1,0 +1,20 @@
+#! /usr/bin/perl
+
+use Cwd;
+use strict;
+
+my $cwd = cwd();
+$cwd =~ s/\/$//g;
+my $fn = shift @ARGV;
+chomp $fn;
+$fn = $cwd . '/' . $fn unless ( $fn =~ /^\// );
+
+die("$fn not found") unless ( -e $fn );
+
+my @foo = split( /\//, $fn );
+my $file = pop @foo;
+$file = '.' . $file;
+
+my $hfn = join '/', ( @foo, $file );
+system("mv $fn $hfn");
+

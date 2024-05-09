@@ -1,0 +1,16 @@
+#! /usr/bin/perl
+
+#: perl replacement for sed. (regexps are better) 
+
+use strict ; 
+
+my $e ; 
+die ("must supply an expression") unless $e = shift @ARGV ; 
+chomp $e ; 
+
+while(<STDIN>) {
+	my $block = '$_ =~ ' . $e . ';' ; 
+	eval $block ; 
+	print $_ ; 
+}
+

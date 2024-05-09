@@ -1,0 +1,43 @@
+#! /Skel/bin/perl
+
+# rtfn (random temp file name) 
+
+# generates /tmp filenames, and 
+# deletes old files corresponding 
+# to those names after an hour. 
+# filenames are formatted e-r.rtfn
+# where e is the epoch time,  
+# r is a one in a million random. 
+
+my $t = time(); # epoch time. 
+my $r = int(rand(1000000) + 1) ; # random number
+my $e = '.rtfn' ; # file extension
+my $p = $ENV{'PERL_TMP'} ; # path for our tmp directory 
+my $x = 3600    ; # tmp files last an hour
+my $X = $t - $x ; # expire cutoff 
+
+opendir($dh, $p) || die ("unable to open $p") ; 
+
+my @old_tmps ; 
+
+foreach((readdir($dh))) {
+        next if $_ =~ /^\./ ; 
+        next unless $_ =~ /^\d+\-\d+\.tmp/ ; 
+        my $interval = $_ ; 
+        $interval =~ s/\-.*//g ; 
+        if ($interval < $X) {
+                push @old_tmps, $_ ; 
+        }
+}
+
+closedir($dh) ; 
+
+foreach(@old_tmps) {
+        $_ = $p . '/' . $_ ;  
+        # warn "expiring $_" ; 
+        unlink $_ ; 
+}
+
+my $rfn = $p . '/' . $t . '-' . $r . $e  ; 
+print $rfn ; 
+

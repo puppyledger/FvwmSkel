@@ -1,0 +1,55 @@
+#! /usr/bin/perl
+
+# A HERE document method.  (perl "HERE" documents are integrated into the language) 
+
+# my $defaultlibpaths = $ENV{'PERL_PATHMODULES'} ;
+# eval($defaultlibpaths)  ;
+# die $@ if $@ ;
+
+use Getopt::Std;    # CLI options
+use Sort::Naturally qw(nsort);
+use Base::Factory::Here;
+
+my %OPTS;
+getopts( 'm:s:h', \%OPTS );
+
+&dohelp if $OPTS{'h'};
+
+my $method = $OPTS{'m'};
+my $sql    = $OPTS{'s'};
+
+my $tn = '$_[0]->{\'_tablename\'}';
+my $ri = '$_[0]->{\'_recordidname\'}';
+my $be = '$_[0]->{\'_blankentry\'}';
+
+# DO SOME AUTOCORRECTION
+
+$sql =~ s/\$self/\$\_\[0\]/g;
+$sql =~ s/\{\"/\{\'/;
+$sql =~ s/\"\}/\'\}/;
+
+$sql =~ s/TABLENAME/$tn/g;
+$sql =~ s/RECORDID/$ri/g;
+$sql =~ s/BLANKENTRY/$be/g;
+
+chomp $method;
+chomp $sql;
+
+&dohelp unless defined $OPTS{'m'};
+&dohelp if defined $OPTS{'h'};
+
+my $T = Base::Factory::Here->new( 'method' => $method );
+print $T->output();
+
+sub dohelp { # 
+   while (<DATA>) { print $_ ; }
+   exit;
+}
+
+__DATA__
+
+makehere: create a here document
+
+usage: makehere -m <methodname> 
+
+

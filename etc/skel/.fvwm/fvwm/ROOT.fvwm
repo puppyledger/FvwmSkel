@@ -1,0 +1,144 @@
+#
+# ROOT.fvwm is the master .fvwmrc file for Fvwm Skel  
+#
+# fvwm is NOT threaded. All fvwm files are processed 
+# sequentially. Variable interpolation in FVWM is 
+# cumbersome and breaks quietly. 
+#
+# Therefore FvwmSkel use fvwm to provide a scaffolding, 
+# while other scripts provide most of the programatic 
+# logic. YMMV. 
+#
+# XFVWMPATH is typically set in .bashrc, and it is 
+# typically referring to $HOME/.fvwm/fvwm which 
+# is where this file is. However this is usually 
+# a system wide link. 
+#
+
+# Where to find or modules 
+ModulePath $[XFVWMPATH]/Module:+
+
+# Where to find images (typically for icons) 
+ImagePath $[XFVWMPATH]/.icon:+
+
+# Static local variable definitions
+Read    $[XFVWMPATH]/LocalVar.fvwm
+
+# Color Configuration for decorations and menus
+Read    $[XFVWMPATH]/ColorSet.fvwm
+
+# Font Configuration for everything
+Read    $[XFVWMPATH]/FontSet.fvwm
+
+# Button Configurations for everything
+Read	$[XFVWMPATH]/ButtonStyle.fvwm
+
+# Menu Specific Style Parameters
+Read    $[XFVWMPATH]/MenuStyle.fvwm
+
+# Configure Icon and IconBox behavior
+Read    $[XFVWMPATH]/IconStyle.fvwm
+
+# Focus and Window Placement
+Read    $[XFVWMPATH]/FocusStyle.fvwm
+
+# Window Titles Decorations 
+Read    $[XFVWMPATH]/DecorStyle.fvwm
+
+# Application Specific Styles
+Read	$[XFVWMPATH]/SpecialStyle.fvwm
+
+# Set the pagers initial dimensions (this is not the only setting)
+DeskTopSize 3 3
+
+# Right click desktop menu 
+Read	$[XFVWMPATH]/RightMenu.fvwm
+
+# Left click desktop menu
+Read	$[XFVWMPATH]/LeftMenu.fvwm
+
+# Middle click desktop menu
+Read	$[XFVWMPATH]/MiddleMenu.fvwm
+
+# Display a menu on right click of an icon
+Read	$[XFVWMPATH]/IconMenu.fvwm
+
+# Display a menu of right click of a title bar
+Read	$[XFVWMPATH]/TitlebarMenu.fvwm
+
+# Styles specific to fvwm module windows
+Read	$[XFVWMPATH]/ModuleStyle.fvwm
+
+# Start Modules
+
+# note the sound entry here is correct, but 
+# fvwm seems to commandeer the audio device 
+# on startup for some reason. 
+
+DestroyFunc StartFunction
+AddToFunc "StartFunction" 
++ I Module FvwmDebug --log $[XLOGPATH]' 
++ I Module FvwmPager * 
++ I Module FvwmEvent
++ I Next (AcceptsFocus !iconic CurrentScreen xterm) Focus
++ I CursorMove 30 40
+# + I Test (True) Exec Esetroot -scale -display :0 $[WALLPAPERDEFAULT] &
++ I Module FvwmCommandS
++ I NavPadToggle # Initializes the numeric desktop pad
++ I Exec aplay $[SOUND_LOGIN] &
++ I Test (Init) Exec $[XMACROPATH]/Start.OnLogin.sh &
+
+# Window button functions
+Read    $[XFVWMPATH]/DecorFunction.fvwm
+
+# Window movement functions
+Read    $[XFVWMPATH]/MoveFunction.fvwm
+
+# Fvwm Event Bindings
+Read	$[XFVWMPATH]/Event.fvwm
+
+###################### MOUSE ##############################################
+
+#     Button	Context Modifi 	Function
+
+# Root Window
+Mouse 1		R   	N       Run_LeftMenu 
+Mouse 2		R    	N       Run_MiddleMenu 
+Mouse 3		R    	N      	Run_RightMenu
+
+# Backgrounded Terminals emulate the root window (symlink bgterm to your terminal)  
+Mouse (bgterm) 1 W    	N       Run_LeftMenu 
+Mouse (bgterm) 2 W    	N       Run_MiddleMenu 
+Mouse (bgterm) 3 W    	N       Run_RightMenu	
+
+# Icon Bindings
+Mouse 1		I	N	Iconify	
+Mouse 3		I	N	Run_IconMenu	
+
+# Movement
+Mouse 1		FS	N	"Resize-or-Raise"
+Mouse 1		T	N	"Move-or-Raise"
+Mouse 3 	T	N       Run_TitlebarMenu	
+
+# Mouse Clicks on Menu Decorations (See DecorStyle.fvwm) 
+Mouse 3 2 N DeleteOrDestroyWindow
+Mouse 1 1 N IconifyOrShadeWindow
+Mouse 3 1 N MaximizeWindow 100 100
+
+# xwindow button 3 provides video recording.  
+# l=record r=stoprecord m=playrecording  
+
+Mouse 1 3 N Exec $[VTP_BIN_PATH]/vtpvideo.pl &
+Mouse 1 5 N Exec $[VTP_BIN_PATH]/vtpstopvideo.pl &
+Mouse 1 7 N Exec $[VTP_BIN_PATH]/vtpplay.pl -v &
+Mouse 1 9 N Exec xmessage publish &
+
+###################### KEYS ##############################################
+
+# Main Key bindings 
+Read $[XFVWMPATH]/KeyBind.fvwm
+
+###################### MODULE SETUP ######################################
+
+# FvwmPager
+Read $[XFVWMPATH]/Pager.fvwm

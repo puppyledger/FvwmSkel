@@ -1,0 +1,186 @@
+
+PDT: P Development Tools
+
+### VIM MACROS
+
+P: Primitive: o,t,r,s,a (object template report sql acessor) 
+	primitives are programatic shortcuts for base templates. 
+
+M: Primitive Methods: s,r 
+	Primitive methods are programatic shortcuts for method templates. 
+
+T: Template: <user defined>
+	user defined templates, called by class. 
+	usage> :T My::Example 
+
+C: Callbacks: cbpub,cbcmd,cbmap,cbprepare
+	callbacks are programatically sophisticated code generators. 
+
+H: Help Files: list,o,etc. 
+	display of help files for the respective primitives, callbacks, and templates. 
+
+### PROGRAMS
+
+pdt 		template tool 
+pdtinstall	installer, and config updater tool. (probably template driven)  
+pdtproject	changes configuration files to change dispatch vectors. 
+
+### PROGRAMS AS PRIMITIVES
+
+primitive_o Pdt::Primitive_O 
+primitive_t Pdt::Primitive_T 
+primitive_r Pdt::Primitive_R 
+primitive_s Pdt::Primitive_S 
+primitive_a Pdt::Primitive_A 
+
+### METHODS AS PRIMITIVES
+method_q	Pdt::Method_Q (sql pair) 
+method_r	Pdt::Method_R (Report) 
+
+### CALLBACKS RUNTIMES (these are runtime)
+	:C cbmap, etc.  
+
+
+### FEATURE COMPLETE: 
+
+.vimrc:	(RMACRO function) 
+rtfn: (random temp file names)					RTFN_TMPDIR
+lessw, catw, viw (pager,editor cli shortcuts)
+isodate (sort friendly formatted date) 
+isotime (sort friendly formatted time) 
+
+
+perltidy
+zipdetails (get params out of a zip file) 
+
+### ADD HELP REQUIRED
+crlf 	  (strip DOS crlf characters) 
+oncd 	  (pretty xterm title bars)  
+chterp	  (change the interpreter in a proggy) 
+depod     (pod stripper)
+seemethod (single method zoomer) 
+capitalize (pipelining tool for capitalizing strings) 
+
+### MAKE MODULAR: 
+
+lspack  (list the packages in a directory) 
+seepack (show thepackage for a particular file) 	
+chpack  (change the name of a package) 
+
+###  PORTING REQUIRED 
+
+lessmod
+catmod
+lsapi
+linecollect
+
+
+### INSTALLATION REQUIRED 
+countperl (off cpan) 
+
+### BROKEN
+
+lscb
+chstring (should use isodate in backup files) 
+
+### SHOULD PROBABLY RENAME AND PORT
+
+pa,px,pt,po (base_o,base_a,base_x,base_t,base_s) 
+
+### CALLBACK GENERATORS: 
+
+cb_cagix
+cbcmd
+cbexport
+cbhelp
+cbimport
+cbinherit
+cbmap
+cborderby
+cbprepare
+cbpub
+cbquery
+cb_slite
+cdisk
+
+### PROBABLY REDUNDANT
+packname
+vipride, spom, vicagix (these are copies of the installer for pidev)   
+
+simpleproperty,runtemplate,testtemplate, vimtemplate (vimtemplate is the embedded version, which we
+	 				wish to keep, the rest can probably go, we should probably keep 
+					one of the others and call it testtemplate, so users can test 
+					templates from the CLI.)   
+
+### PROBABLY DEPRECATED
+
+cdisk (test primitives for cagix disk features) 
+shortcommand (early version of runtemplate) 
+methmap ( appears to be an early iteration of makefactory ) 
+spanky (I have no idea) 
+
+
+
+
+### 
+
+
+doeach
+etime
+eview
+evim
+ex
+exportall
+findfactories
+gview
+gvim
+gvimdiff
+gvimtutor
+ide-macros-simple.tar.gz
+ide-programs-simple.tar.gz
+
+lessmethod
+lessmod
+
+lsclass
+lsfields
+lsmethod
+
+m
+makefactory
+makehere
+makehtform
+makequery
+
+methmod
+methwrite
+old.cbmap
+old.cbprepare
+old.vimod
+pd
+pdall
+perlsh
+pexp
+png2template
+preparemap
+printrtfn
+projectsum
+qb
+rgview
+rgvim
+rview
+rvim
+scandeps.pl
+
+sqlpair
+vi
+view
+vim
+vimdiff
+vimod
+vimtutor
+vipod
+winpdall
+xpdall
+xxd
+

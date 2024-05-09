@@ -1,0 +1,20 @@
+1. fix bleeps,bloops
+
+2. fix icons 
+
+3. fix backup tools
+
+4. make "project -n" and githup integration a bit more straight forward. 
+
+5. find the source code for the FFMPEG wrappers and get them working 
+	for screencasting tools. 
+
+6. Fix terminal-to-terminal cut and paste in vim, urxvt. 
+
+7. Add autocompletion to vim.
+
+
+
+	
+
+

@@ -1,0 +1,10 @@
+This is incomplete for skel and fvwm. 
+
+What needs to happen, is that there needs to be a user:group added "minicom". 
+Because the device is dynamic, the run scripts need to chown the 
+device to minicom:minicom, 770, and we need to be added to the minicom group. 
+
+
+
+
+

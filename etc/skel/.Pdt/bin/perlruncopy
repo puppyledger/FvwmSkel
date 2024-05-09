@@ -1,0 +1,16 @@
+#! /bin/bash
+
+export VIPERLBACKUP=".$1.`isotime`"
+echo $VIPERLBACKUP
+
+echo "BACKING UP"
+echo "$1 --> $VIPERLBACKUP"
+
+echo "RUNNING"
+$PDT_PERL $1  
+
+echo "BREAK?" 
+cp $1 $VIPERLBACKUP
+
+sleep 5
+

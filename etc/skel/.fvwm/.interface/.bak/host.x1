@@ -1,0 +1,49 @@
+#! /bin/bash
+
+# Our network utility should be able to handle 
+# seperated parameter, and policy files. 
+
+############## INTERFACES #####################
+
+INTERFACE0='enp1s0'
+IPV4ADDR0='192.168.10.223'
+IPV4MASK0='24' 	
+IPV4GW0='192.168.10.1'
+IPV6ADDR0='2607:f740:000b:0000:0000:0000:0000:0f8f'
+IPV6MASK0='64'
+IPV6GW0='2607:f740:000b:0000:0000:0000:0000:0001'
+
+INTERFACE100='lo'
+IPV4ADDR100='127.0.0.1'
+IPV4MASK100='8'
+IPV6ADDR100='0:0:0:0:0:0:0:1'
+
+############## PORTS #####################
+
+PORT_NTP1='123'
+PORT_SSH1='4422'
+PORT_SSH2='5522'
+PORT_HTTP1='80'
+PORT_HTTPS1='443'
+PORT_SMTP1='25'
+PORT_DNS1='53'
+
+############## FRIENDLY HOSTS #####################
+
+# 
+# NO SMARTHOST IS AVAILABLE 
+# SMTP1='127.0.0.1'
+#
+
+# Host Virtual Console Server 1 
+HVCONSOLE1='209.177.157.4'
+
+# GOOGLES DNS RESOLVERS 
+
+RESOLVER1="8.8.8.8" 
+RESOLVER2="8.8.4.4" 
+
+echo "variables complete"
+sleep 1
+
+

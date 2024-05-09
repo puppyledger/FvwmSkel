@@ -1,0 +1,50 @@
+#! /bin/bash
+
+# recursively tar a directory and burn a DVD 
+# of it
+
+THISDIR=$PWD
+THISDATE=`/bin/date +%F`
+THISTAR=cagixbuildenv.$THISDATE.tar.gz 
+THISISO=cagixbuildenv.$THISDATE.iso
+
+echo "creating $THISTAR in 5 seconds:"
+sleep 5
+
+tar -z -cvf $THISTAR $THISDIR/*
+md5sum $THISTAR > $THISTAR.md5
+
+echo "generating ISO $THISISO in 5 seconds:"
+sleep 5
+
+genisoimage -V $THISTAR -J -r -o $THISISO ./$THISTAR
+
+echo "removing $THISTAR in 5 seconds"
+sleep 5
+
+rm $THISTAR
+
+echo "burning DVD in 5 seconds:"
+sleep 5
+
+wodim -v dev=/dev/cdrom $THISISO
+
+echo "removing $THISISO in 5 seconds:" 
+sleep 5
+
+rm $THISISO 
+
+sleep 10 
+
+mount /dev/cdrom ./cdrom
+cat $THISTAR.md5
+md5sum ./cdrom/$THISTAR
+
+sleep 3 
+umount /dev/cdrom 
+
+sleep 3 
+echo "COMPLETE"
+
+eject
+

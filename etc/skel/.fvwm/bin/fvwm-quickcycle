@@ -1,0 +1,33 @@
+#! /home/x1/.fvwm/bin/perl 
+
+#
+# Take an interval and a command and repeatedly execute the command
+# and display the output at the specified interval. 
+#
+
+use Class::Paths ; # set out module paths for _this_ system
+use Getopt::Std  ; # CLI options
+use Win32::CRLF qw(crlf) ; # strip crap
+use Sort::Naturally qw(nsort) ; # sort list output
+
+use Class::GAPI ; 
+use Class::List ; 
+
+my %OPTS ; 
+getopts('i:c:', \%OPTS) ; 
+
+my $O = Class::GAPI->new(%OPTS) ; 
+
+$O->i(5) unless defined $O->i() ; 
+die "usage: quickcycle -i <interval> -c <command>\n" unless defined $O->c() ; 
+
+my $c = $O->c() ; 
+
+while (1) {
+	open(FOO, "clear \; $c |") ; 
+	while(<FOO>) {
+		print $_ ; 
+	}
+	sleep ($O->i()) ; 
+}
+

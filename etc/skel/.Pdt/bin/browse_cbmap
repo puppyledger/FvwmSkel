@@ -1,0 +1,58 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-37-33.EDT';
+
+#:
+#: usage: B: cbmap <class> <optional methodname>
+#:
+#: callback browser: verify a specific callback
+#: exists in a class, or list all callbacks in a
+#: class. Note that it is possible to delete a
+#: function, and leave a dangling callback.
+#:
+
+use Sort::Naturally qw(nsort);
+use strict;
+
+system("clear");
+
+my $class = shift @ARGV;
+chomp $class;
+my $cbname = shift;
+chomp $cbname;
+
+unless ( length($class) ) {
+   print "\nusage: B: cbmap <class> <optional callbackname>\n";
+   while (<STDIN>) { exit; }
+}
+
+my $cbmap;
+my @k;    # callback keys
+
+my $block = 'use ' . $class . ';' . '$cbmap = ' . $class . '::cbmap() ;';
+$block .= '@k = keys(%$cbmap);';
+eval($block);
+
+if ($@) {
+   warn $@;
+   while (<STDIN>) { exit; }
+}
+
+unless ( length($cbname) ) {
+   print "\n";
+   print "$class cbmap:\n\n\t";
+   print( join "\n\t", ( nsort(@k) ) );
+   print "\n\n";
+
+   while (<STDIN>) { exit; }
+
+} else {
+   foreach ( nsort(@k) ) {
+      if ( $_ eq $cbname ) {
+         print "\n\n$cbname exists in $class\n\n";
+         while (<STDIN>) { exit; }
+      }
+   }
+}
+

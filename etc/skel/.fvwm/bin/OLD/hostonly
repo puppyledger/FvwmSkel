@@ -1,0 +1,5 @@
+#! /bin/bash
+
+export CURRENTSTATION=`/usr/bin/hostname | /usr/bin/sed 's/\..*//'`
+echo $CURRENTSTATION
+

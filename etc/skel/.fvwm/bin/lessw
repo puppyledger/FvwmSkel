@@ -1,0 +1,5 @@
+#! /bin/bash
+
+source $HOME/.bashrc
+less `which $1` 
+

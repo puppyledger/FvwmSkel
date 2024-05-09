@@ -1,0 +1,6 @@
+#! /bin/bash
+
+# takes a window id, returns a title from the respective window.  
+
+$XWININFOCMD -id $1 | grep xwininfo | $XTOOLPATH/pexp 's/^.* \"(.*)\"/$1/' | $XTOOLPATH/pexp 's/\*//g'
+

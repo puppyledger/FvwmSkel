@@ -1,0 +1,50 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-49-24.EDT';
+
+use Pdt::Method_Wrapper;
+use Sort::Naturally qw(nsort);
+use strict;
+
+my $rtfn_file;
+my $iscli;    # flag
+
+unless ( length( $ENV{'RTFN'} ) ) {
+   $iscli     = 1;
+   $rtfn_file = `rtfn`;
+   warn $rtfn_file;
+} else {
+   $rtfn_file = $ENV{'RTFN'};
+}
+
+system('clear');
+
+my @M = @ARGV;
+
+print "\nbuilding ", scalar(@M), " methods.";
+print "\nproperty name:";
+my $pname = <STDIN>;
+chomp $pname;
+
+chomp( $M[ $#M ] ) if scalar(@M);
+@M = nsort(@M);
+
+open( RTFN, ">$rtfn_file" );
+
+my $T = Pdt::Method_Wrapper->new();
+
+foreach (@M) {    #
+   $T->clear();
+   $T->append( 'method_name' => $_, 'property_name' => $pname );
+   print RTFN $T->output();
+}
+
+close(RTFN);
+
+if ($iscli) {
+   open( RTFN, "$rtfn_file" );
+   while (<RTFN>) { print; }
+   close(RTFN);
+}
+

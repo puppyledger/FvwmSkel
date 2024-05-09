@@ -1,0 +1,8 @@
+
+### cat /proc/asound/modules
+
+#  0 snd_hda_intel
+#  1 snd_hda_intel
+
+defaults.ctl.card 1; 
+

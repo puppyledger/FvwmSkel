@@ -1,0 +1,92 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-49-43.EDT';
+
+#: list all the classes in a directory
+
+use Cwd;
+use Getopt::Std;
+use Sort::Naturally;
+
+my %OPTS;
+getopts( 'd:xh', \%OPTS );
+
+# use the passed directory, or get the cwd
+
+my $d;    # directory
+$d = $OPTS{'d'} if length( $OPTS{'d'} );
+$d = getcwd() unless length $OPTS{'d'};
+$d =~ s/\/$//g;    # trim slash
+
+# if the passed directory is relative make it fq
+
+unless ( $d =~ /^\// ) {
+   $rd = getcwd();
+   $d  = $rd . '/' . $d;
+}
+
+my @pms;
+my @classes;
+my $dh;
+
+opendir( $dh, $d ) || die("unable to open $d");
+warn $dh;
+
+my $n = 0;
+foreach ( ( readdir($dh) ) ) {
+   next if $_ =~ /^\./;
+   next unless $_ =~ /\.pm$/;
+   push @pms, "$d\/$_" if $_ =~ /\.pm/;
+   $n++;
+}
+
+closedir($dh);
+
+@pms = nsort(@pms);
+
+foreach my $fn (@pms) {
+
+   open( FN, $fn );
+   my $line = readline(FN) || warn( "$fn", '... file not readable.' );
+   close(FN);
+   chomp $line;
+
+   unless ( $line =~ /package/ ) {
+      warn( $fn, ' not a package? ignoring.' );
+      next;
+   }
+
+   if ( $OPTS{'x'} && $line =~ /EXPORTONLY/ ) {
+      warn( $fn, ' is an exporter. ignoring.' );
+      next;
+   }
+
+   $line =~ s/^\s*package\s*//;
+   $line =~ s/\#.*$//;    # remove comments
+   $line =~ s/\;.*//g;    #  remove all but the package name
+   $line =~ s/\s+//g;     #
+   print "$line\n";
+
+}
+
+sub dohelp { # 
+   open("__DATA__");
+   while (<DATA>) {
+      print $_ ;
+   }
+   close(DATA);
+   exit;
+}
+
+__DATA__ 
+
+SYNOPSIS:
+
+list all packages in the current directory, or the directory passed with -d 
+
+usage: lspack || lspack -d <directory>
+
+-x ignore exporter modules. (checks the first line, and ignores any modules that have the string EXPORTONLY) 
+   this feature is also used automatically by makefactory.  
+

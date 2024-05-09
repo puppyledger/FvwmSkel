@@ -1,0 +1,94 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-39-39.EDT';
+
+#: cbcmd callback generator. seeks out commands preceeded with
+#: the docmd_ preamble. If $ENV{'LASTEDITFILE'} is defined, the
+#: the class defined in the first line of that file will be
+#: added to ARGV, and all those classes will be interrogated.
+#: if $ENV{'RTFN'} is a defined filename, the data will be
+#: written to that file. If not output is printed to STDOUT.
+
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbcmd;
+use strict;
+
+# get our IDE environment variables
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+# turn of warnings (better screen transitions)
+
+local $SIG{__WARN__} = sub { };
+
+# the name of the executable is used in the template
+
+my $execname = $0;
+$execname =~ s/^.*\///g;
+
+#
+
+my $doc    = Pdt::Cbcmd->new();    # the template handle
+my @Eclass = env2class();          # get the list of classes to process Pdt::SourceEnv
+my $OUTFH  = rtfnorstdout();       # get a writable filehandle Pdt::Sourceenv
+
+# avoid duplication with a collision table.
+
+my %COLLISION;
+
+# the name of the property we store callbacks in.
+
+my $mapname = 'cbcmd';
+
+# the root methods always get preference, so we set them aside.
+
+my @mapstatement;
+
+die('no classes defined') unless scalar(@Eclass);
+
+my $n = 0;
+
+foreach my $editclass (@Eclass) {
+   chomp $editclass;
+
+   my $fn    = seefn($editclass);    # get the filename for the class
+   my @mlist = seemethod($fn);       # read thefile and get all the methods.
+
+   open( MLIST, "methmod $editclass |" );
+
+   foreach (@mlist) {
+      next unless $_ =~ /^docmd/;    # ignore constructors
+      chomp;
+
+      my $foo = '$self->{\'' . $mapname . '\'}->{\'' . $_ . '\'} = sub { shift ; return $self->' . $_ . '(@_) ; }' . ';';
+
+      my $checkvalue = $_;
+
+      unless ( $ENV{'LASTEDITCLASS'} eq $editclass ) {
+         $foo .= ' # ' . $editclass;
+      }
+
+      # flag to avoid duplicates
+
+      push( @mapstatement, $foo ) unless $COLLISION{$checkvalue};
+      $COLLISION{$checkvalue} = 1;
+   }
+
+   $n++;
+}
+
+@mapstatement = nsort(@mapstatement);
+my $bar = join "\n\t", @mapstatement;
+
+$doc->append(
+   'execname'     => $execname,
+   'mapname'      => $mapname,
+   'mapstatement' => $bar
+);
+
+print $OUTFH $doc->output();
+print $OUTFH "\n";
+

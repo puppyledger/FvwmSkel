@@ -1,0 +1,9 @@
+#! /bin/bash
+
+# edit the file, copy it to the macro read directory, run it to make sure it works, 
+# and back it up. 
+
+vi $1 $2
+exepub $1
+$XOFFICEPATH/python $1
+cp $1 .$1.`isodate`

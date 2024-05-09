@@ -1,0 +1,21 @@
+#! /bin/bash
+
+clear
+
+while true; do
+
+read -p "run $2 using $1? (Y/n)" yn
+
+case $yn in
+	[yY] ) echo "continuing..." ; 
+		break;;
+	[nN] ) echo "exiting..."  ; 
+		exit;;
+	* ) echo "continuing..." ; 
+		break;;
+esac 
+done 
+
+source $1
+$2
+

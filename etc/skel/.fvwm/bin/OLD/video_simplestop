@@ -1,0 +1,8 @@
+#! /bin/bash 
+
+kill `fvwm-getenv VIDEOPID`
+FvwmCommand 'SetEnv VIDEOPID \"\"'
+
+#aplay $SOUNDPATH/CSOUNDS/C801.WAV &
+
+

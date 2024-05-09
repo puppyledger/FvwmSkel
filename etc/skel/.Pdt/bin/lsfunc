@@ -1,0 +1,102 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-45-22.EDT';
+
+#: lsfunc: with one argument is lists the functions of a package
+#: with two options it shows a named function within the package.
+
+my $VERSION = '2018-02-07.09-02-30.EST';
+
+use Pdt::SourceEnv qw(:all);
+use Sort::Naturally qw(nsort);
+
+use strict;
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+#print "$ENV{'PDT_LIB_PATH'}\n" ; # path to the current project libraries
+#print "$ENV{'PDT_BIN'}\n" ; # path to the installed location of the pdt scripts
+
+my $prefix = shift @ARGV;
+my $suffix = shift @ARGV;
+
+chomp $prefix;
+chomp $suffix;
+
+open( FLIST, "/usr/bin/find -L $ENV{'PDT_LIB_PATH'} |" );
+
+### get the initial file list
+
+my @F;    #
+
+while (<FLIST>) {    # by file name
+   my $fn = $_;
+
+   chomp $fn;
+   my @fntok = split( '/', $fn );
+   my $lasttok = "$fntok[ $#fntok ]";
+   next if ( $lasttok =~ /^\./ );
+   next unless ( $lasttok =~ /\.pm$/i );
+
+   push @F, $fn;
+
+}
+
+close(FLIST);
+
+# print "Total Project Files: ", scalar(@F), "\n";
+sleep 1;
+
+#### extract all the package strings
+
+my @C;    # classes
+my %class2fn;
+
+foreach my $fn (@F) {
+   open( FOO, "$ENV{'PDT_BIN'}/seepack $fn |" );
+   while (<FOO>) {
+      my $foo = $_;
+      chomp $foo;
+      if ( $foo =~ /use/ ) {
+         push @C, $foo;    # an array of use statements:
+         $class2fn{ usestring2class($foo) } = $fn;    # a hash class->fn
+      }
+
+   }
+   close(FOO);
+}
+
+sub usestring2class {
+   $_[ 0 ] =~ s/^use\s+//;
+   $_[ 0 ] =~ s/\s*\;\s*$//;
+   return $_[ 0 ];
+}
+
+### prune based on prefix if one
+
+my @BR;
+
+foreach my $class ( keys(%class2fn) ) {
+   if ( $class eq $prefix ) {    #
+                                 # print $class2fn{$class};
+      unless ( length($suffix) ) {    # just asking for a list
+         open( BROWSE, "$ENV{'PDT_BIN'}/browsemethod -f $class2fn{$class} |" );
+         while (<BROWSE>) { push @BR, $_; }
+         close(BROWSE);
+         print @BR;
+      } else {                        # we are asking for a specific function
+         open( BROWSE, "$ENV{'PDT_BIN'}/seemethod -f $class2fn{$class} -m $suffix |" );
+         while (<BROWSE>) { push @BR, $_; }
+         close(BROWSE);
+         print @BR;
+      }
+   }
+}
+
+### this just delay sprevent returning to the UI
+
+if ( scalar(@C) ) {
+   while (<STDIN>) { exit; }
+}
+

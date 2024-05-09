@@ -1,0 +1,48 @@
+# Some environment variables need to be set on initialization 
+# of fvwm
+
+# This string is compared to CURRENTSTATION in .bashrc to 
+# determin whether the shell is running on the same machine 
+# as fvwm. This should be done by "onchdir"
+
+PipeRead "echo SetEnv HOMESTATION `$XFVWMPATH/local/bin/hostonly`" 
+
+# The string displayed on the pager window, HOMESTATION is 
+# the machine on which fvwm is running. SKELVERSION is 
+# set in bashrc, and reflects the current revision of the 
+# skeleton user environment. 
+
+SetEnv PAGERHEAD "$[USER]\@$[HOMESTATION]:\($[SKELVERSION]\)"
+
+# Set the numlock flag on at startup
+SetEnv NumLockOn 1 
+
+# vcanvas (Video Canvas) is a bounding box that can be 
+# shared by multiple windows to provide window overlay 
+# functionality. 
+
+# vcanvas defaults 
+SetEnv VCANVASGEOM 320x240+0+0  # startup window geometry  
+SetEnv VFRAMERATE 25 		# default video framerate
+
+# make root window dimensions into an environment variable for easier access. 
+PipeRead "echo SetEnv ROOTWINDOW_WIDTH `$XFVWMPATH/local/bin/rootwindowwidth`" 
+PipeRead "echo SetEnv ROOTWINDOW_HEIGHT `$XFVWMPATH/local/bin/rootwindowheight`" 
+
+# half of the root window width
+PipeRead "echo SetEnv ROOTWINDOW_HWIDTH `$XFVWMPATH/local/bin/rootwindowwidth | $XFVWMPATH/bin/perl -e 'print int($ENV{"ROOTWINDOW_WIDTH"} / 2) ;'`" 
+
+# half of (root window height - pager height). 
+PipeRead "echo SetEnv ROOTWINDOW_HHEIGHT `$XFVWMPATH/local/bin/rootwindowhheight`" 
+
+# window half heigh
+
+# These are variables set by scripts to allow menus to control  
+# audio and video recording processes
+
+# SetEnv AUDIOPID 
+# SetEnv AUDIO_LASTRECORD
+
+# SetEnv VIDEOPID
+# SetEnv VIDEO_LASTRECORD
+

@@ -1,0 +1,48 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-51-03.EDT';
+
+### run par against vim selected text.
+
+use Sort::Naturally qw(nsort);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use strict;
+
+### SETTINGS
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+my $LEF  = $ENV{'LASTEDITFILE'};
+my $RTFN = $ENV{'RTFN'};
+### CLI INPUT
+
+# die("no selection defined on the CLI") unless scalar(@ARGV);
+system("xmessage $ARGV[0]");
+
+chomp $ARGV[ 0 ];
+my $line_start;
+my $line_end;
+my $lpw;
+my $tabstop;
+( $line_start, $line_end, $lpw, $tabstop ) = split( /\,/, $ARGV[ 0 ] );
+
+# NOTE: THE PATH IS NOT SPECIFIED!
+
+open( RTFH, ">$RTFN" ) || die("no RTFN environment variable defined");
+open( LEFH, $LEF )     || die("no LASTEDITFILE environment variable defined");
+
+my $n = 0;
+
+while (<LEFH>) {
+
+   if ( $n > $line_start && $n < $line_end ) {
+      system("xmessage $_");
+      print RTFH $_;
+   }
+
+   $n++;
+}
+
+close(LEFH);
+close(RTFH);
+

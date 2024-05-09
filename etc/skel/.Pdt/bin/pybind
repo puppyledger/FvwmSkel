@@ -1,0 +1,39 @@
+#! /usr/bin/perl
+
+# bind an fkey to pyruncopy <file>
+
+use Cwd ; 
+use strict ; 
+
+die ('usage: pybind <fkey> <programname>') unless scalar(@ARGV == 2) ; 
+die ('usage: pybind <fkey> <programname>') unless ($ARGV[0] =~ /^f\d{1,2}/i) ; 
+chomp ($ARGV[1]) ; 
+die ('usage: pybind <fkey> <programname>') unless (-e $ARGV[1]) ; 
+$ARGV[0] =~ tr/a-z/A-Z/ ; 
+
+my $thiscwd = cwd() . '/' ; 
+
+# warn $ARGV[0] ; 
+# warn $thiscwd ; 
+
+&doyes ; 
+
+sub doyes {
+	my $block = 'FvwmCommand '
+		. "\'" . 'Key ' 
+		. $ARGV[0] 
+		. ' A A Exec ' 
+		. 'xterm -e "' 
+		. "pyruncopy " 
+		. $thiscwd 
+		. $ARGV[1] 
+		. "\"\'"  ; 
+
+
+#	print $block  ;
+
+	system($block) ; 
+	exec("vipy $ARGV[1]") ; 
+	exit ; 
+}
+

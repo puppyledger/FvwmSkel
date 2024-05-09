@@ -1,0 +1,57 @@
+#! /home/x1/.fvwm/bin/perl
+#
+# fvwm-alert: a simple yes/no dialog
+# -d <default> (yes/no)
+# -m <Message>
+# -w <width>  
+#
+
+use Getopt::Std ;
+use Tk ; 
+
+my %OPTS ;
+getopts('d:m:u:q', \%OPTS) ; # path ,x string request. 
+
+my $onceflag = 1 ; 
+
+# Default input strings   
+if ($OPTS{'q'}) { $OPTS{'d'} = '' unless $OPTS{'d'} =~ /\w+/ ; } 
+else { $OPTS{'d'} = 'sorry, too lazy.' unless $OPTS{'d'}  =~ /\w+/ ; }
+$OPTS{'m'} = 'I need some data:' unless $OPTS{'m'} =~ /\w+/ ; 
+$OPTS{'w'} = 40 unless $OPTS{'w'} =~ /\d+/ ; 
+
+# Construct GUI
+my $MW = MainWindow->new() ; # Tk MW 
+$MW->geometry($ENV{'TkSmallGeom'}) ; 
+my $WindowID = $MW->wrapper->[0] ; 
+
+my $L1 = $MW->Label(-justify => 'center', -wraplength => '80',  -textvariable => \$OPTS{'m'})->pack(-side => "top", -anchor => "n"); 
+my $E1 = $MW->Entry(-textvariable => \$OPTS{'d'}, -width => $OPTS{'w'}, -show => '>')->pack(-side => "bottom", -anchor => "s");  
+
+$E1->focus(); 
+$E1->selectionFrom(0) ; 
+$E1->selectionTo(length($OPTS{'d'})) ; 
+
+$MW->bind('<KeyRelease-Return>' => \&doyes); 
+$MW->bind('<KeyRelease-Escape>' => \&dono); 
+
+&warp2me if $onceflag ; 
+$onceflag = 0 if $onceflag ; 
+
+MainLoop;
+
+sub dono {
+	exit ; 
+}
+
+sub doyes {
+	print $OPTS{'d'} ; 
+	exit ; 
+}
+
+sub warp2me {
+	my $warpblock = 'FvwmCommand \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'' ; 
+	system ($warpblock) ; 
+}
+
+

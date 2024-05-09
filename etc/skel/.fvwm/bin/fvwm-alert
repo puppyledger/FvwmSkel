@@ -1,0 +1,89 @@
+#! /usr/bin/perl
+
+#
+# fvwm-alert: a simple yes/no dialog
+#
+# -g <geometry>
+# -d <default> (yes/no)
+# -m <message> "a string to display"  
+#
+
+#BEGIN { 
+#        my $defaultlibpaths = $ENV{"PERL_PATHMODULES"} ; 
+#        eval($defaultlibpaths)  ; 
+#        die $@ if $@ ; 
+#} 
+
+use Getopt::Std ;
+use X11::Xlib ; 
+use Tk ; 
+
+# STATICS
+my $offsetgeometry ; 
+my $message ; 
+
+my %OPTS ;
+getopts('g:d:m:h', \%OPTS) ; # path ,x string request. 
+
+# print help if requested
+&dohelp if defined $OPTS{'h'} ;
+
+if ($OPTS{'g'}) { # get users geometry string if supplied
+        $offsetgeometry = $OPTS{'g'} ; 
+} else { # use a default if not
+        # Figure out our geometry
+        my $display = X11::Xlib->new() ;
+        my $screenwidth = $display->DisplayWidth() ; 
+        my $screenheight = $display->DisplayHeight() ; 
+        my $windowwidth = 80 ; 
+        my $windowheight = 40 ; 
+        my $offsetwidth = ($screenwidth - $windowwidth) / 2 ; 
+        my $offsetheight = ($screenheight - $windowheight) / 2 ; 
+        $offsetgeometry = $windowwidth . 'x' . $windowheight . '+' . $offsetwidth . '+' . $offsetheight  ; 
+}
+
+my $onceflag = 1 ; 
+
+# Default to yes, and Cancel unless specified: 
+$OPTS{'d'} = 'No' if $OPTS{'d'} =~ /no/i ;   
+$OPTS{'d'} = 'Yes' unless $OPTS{'d'} =~ /no/i ; 
+$OPTS{'m'} = 'Continue?' unless $OPTS{'m'} =~ /\w+/ ; 
+
+my $MW = MainWindow->new() ; # Tk MW 
+$MW->geometry($offsetgeometry) ; 
+my $WindowID = $MW->id() ; 
+warn $WindowID ; 
+
+my $L1 = $MW->Label(-justify => 'center', -wraplength => '80',  -textvariable => \$OPTS{'m'})->pack(-side => "top", -anchor => "n") ; 
+my $B1 = $MW->Button(-text => 'No', -underline => '0', -command => \&dono)->pack(-side => "left", -anchor => "s") ;  
+my $B2 = $MW->Button(-text => 'Yes', -underline => '0', -command => \&doyes)->pack(-side => "right", -anchor => "s") ;  
+
+$B1->focus() if $OPTS{'d'} eq 'No' ; 
+$B2->focus() if $OPTS{'d'} eq 'Yes' ; 
+
+# $MW->bind('<KeyRelease-Return>' => \&doyes) ; 
+$MW->bind('<KeyRelease-y>' => \&doyes) ; 
+$MW->bind('<KeyRelease-Escape>' => \&dono) ; 
+$MW->bind('<KeyRelease-n>' => \&dono) ; 
+
+&warp2me if $onceflag ; 
+$onceflag = 0 if $onceflag ; 
+
+MainLoop;
+
+sub dono {
+	print "0" ; 
+	exit ; 
+}
+
+sub doyes {
+	print "1" ; 
+	exit ; 
+}
+
+sub warp2me {
+	my $warpblock = 'FvwmCommand \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'' ; 
+	system ($warpblock) ; 
+}
+
+

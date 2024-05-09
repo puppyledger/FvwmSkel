@@ -1,0 +1,6 @@
+#! /bin/bash
+
+# set an fvwm environment variable from the CLI
+
+FvwmCommand 'SetEnv LASTFOCUSED "ThisWindow WindowId"'
+echo `fvwm-getenv LASTFOCUSED`

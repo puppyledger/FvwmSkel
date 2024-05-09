@@ -1,0 +1,7 @@
+This is incomplete for skel and fvwm. 
+
+What needs to happen, is that there needs to a user added "minicom". 
+Because the device is dynamic, the run scripts need to chown the 
+device to 
+
+

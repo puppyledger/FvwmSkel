@@ -1,0 +1,77 @@
+
+# this is creating an audio recording with some crackles. 
+# arecord -D hw:1,0 -d 5 -f cd foo.wav -c 2
+
+# this is producing an echoing mess in ffmpeg 
+#
+# ffmpeg -ac 2 -thread_queue_size 512 -f alsa -i front_mic -acodec pcm_s16le -ar 48000 $HOME/foo.wav
+
+#pcm.!default front:Generic {
+#	type hw
+#	card 1
+#	device 0
+#}
+
+########################## BEFORE 2021-07-06
+
+# pcm.front_mic 
+#{
+#	type hw
+#	pcm "hw:1,0"
+#	card Generic 
+#}
+
+pcm.!default {
+	type asym
+
+	playback.pcm
+	{
+		type plug
+		slave.pcm "dmixer"
+	}
+
+	capture.pcm
+	{
+		type plug
+		slave {
+			pcm "hw:1,0"
+		}		
+	}
+
+}
+
+pcm.dmixer  {
+ 	type dmix
+ 	ipc_key 1024
+ 	slave {
+		pcm "hw:1,0"
+		period_time 0
+		period_size 1024
+		buffer_size 4096
+		rate 48000
+	}
+	bindings {
+		0 0
+		1 1
+	}
+}
+
+ctl.dmixer {
+	type hw
+	card 1
+}
+
+pcm.pulse {
+	type pulse
+
+	hint {
+		show on 
+		description "pulse through alsa"
+	}
+}
+
+ctl.pulse {
+	type pulse
+}
+
+######

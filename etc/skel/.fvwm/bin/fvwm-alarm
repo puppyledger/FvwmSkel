@@ -1,0 +1,107 @@
+#! /Skel/bin/perl
+
+
+# TODO: Label needs to be turned into a flat ROTEXT.
+# Window title needs to be set, so that this can 
+# be differentiated in FVWM, and set to have no borders. 
+#
+
+BEGIN { 
+        my $defaultlibpaths = $ENV{"PERL_PATHMODULES"} ; 
+        eval($defaultlibpaths)  ; 
+        die $@ if $@ ; 
+} 
+
+#
+# fvwm-alarm: a simple notice dialog  
+# -m <message> "a string to display"  
+# -g <geometrystring>
+# -h help
+#
+
+use Getopt::Std ;
+use X11::Xlib ; 
+use Tk ; 
+
+# STATICS
+my $offsetgeometry ; 
+my $message ; 
+
+my %OPTS ;
+getopts('m:g:h', \%OPTS) ; # message,geometry,help 
+
+# print help if requested
+&dohelp if defined $OPTS{'h'} ; 
+
+# get users message, or use a default if none supplied
+$OPTS{'m'} = 'Error:' unless $OPTS{'m'} =~ /\w+/ ; 
+$message = $OPTS{'m'} ; 
+
+if ($OPTS{'g'}) { # get users geometry string if supplied
+	$offsetgeometry = $OPTS{'g'} ; 
+} else { # use a default if not
+	# Figure out our geometry
+	my $display = X11::Xlib->new() ;
+	my $screenwidth = $display->DisplayWidth() ; 
+	my $screenheight = $display->DisplayHeight() ; 
+	my $windowwidth = 80 ; 
+	my $windowheight = 40 ; 
+	my $offsetwidth = ($screenwidth - $windowwidth) / 2 ; 
+	my $offsetheight = ($screenheight - $windowheight) / 2 ; 
+	$offsetgeometry = $windowwidth . 'x' . $windowheight . '+' . $offsetwidth . '+' . $offsetheight  ; 
+}
+
+
+my $MW = MainWindow->new() ; # Tk MW 
+$MW->geometry($offsetgeometry)   ; 
+my $WindowID = $MW->wrapper->[0] ; 
+
+my $onceflag = 1 ; 
+
+$catchreturn = 0 ; 
+
+my $L1 = $MW->Label(-textvariable => \$message)->pack(-side => "top", -anchor => "n") ; 
+my $B1 = $MW->Button(-text => 'Ok', -underline => '0', -command => \&dook)->pack(-side => "bottom", -anchor => "e") ;  
+$B1->focus() ; 
+
+$MW->bind('<KeyRelease-Return>' => \&dook) ; 
+$MW->bind('<KeyRelease-Escape>' => \&dook) ; 
+
+&warp2me if $onceflag ; 
+$onceflag = 0 if $onceflag ; 
+
+MainLoop;
+
+sub dook {
+	exit ; 
+}
+
+sub warp2me {
+	my $warpblock = 'FvwmCommand \'WindowID ' . $WindowID . ' WarpToWindow 50 50\'' ; 
+	system ($warpblock) ; 
+}
+
+sub dohelp { # 
+	while (<DATA>) { print $_ ;  }
+	exit ; 
+}
+
+__DATA__
+
+fvwm-alarm: a simple notice dialog equivilant to xmessage. 
+
+-m <message> "a string to display"
+-g <geometrystring> format: <windowwidth>x<windowheight>+<offsetwidth>+<offsetheight>  
+-h help
+
+sub widthbymessage { # 
+	my $min = shift @_  ; 
+	my $max = shift @_  ; 
+	my $message = shift ; 
+	my $charwidth = 10  ; 
+}
+
+sub heightbymessage {
+	
+}
+

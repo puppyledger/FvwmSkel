@@ -1,0 +1,14 @@
+#! /bin/bash 
+
+#:
+#: usage:M dbset 
+#:
+#:       basic set of database functions for a simple records table 
+#: 
+
+echo "Method_Dbset"
+echo $RTFN
+echo $LASTEDITFILE
+sleep 1
+
+pdt 'Pdt::Method_Dbset'

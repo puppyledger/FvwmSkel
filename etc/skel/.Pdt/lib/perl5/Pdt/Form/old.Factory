@@ -1,0 +1,61 @@
+package Pdt::Form::Factory;    # EXPORTONLY
+
+# generated with macro (:P w)
+
+use Pdt::O qw(:all);
+our @ISA = qw(Pdt::O);
+
+use Pdt::Form::Button;
+use Pdt::Form::Entry;
+use Pdt::Form::Password;
+
+use strict;
+
+# factories are autolithic, but widgets are plurolistic, so
+# none are constructed at startup.
+
+### CONSTRUCTOR
+
+sub new {    # factory is a simple autolith
+   my $class = shift;
+   my ( $self, $start ) = AUTOLITH($class);
+   $self->cbmap() if $start;
+   return ($self);
+}
+
+sub newwidget {    # construct a plurolith by name
+   my $self       = shift;
+   my $methodname = shift;
+
+   if ( ref( $self->{'cbmap'}->{$methodname} ) eq 'CODE' ) {
+      return ( &{ $self->{'cbmap'}->{$methodname} }( $self, @_ ) );
+   }
+
+   return undef;
+}
+
+### CALLBACK
+
+sub cbmap {    # (:C cbmap)
+   my $self = shift;
+
+   # callback map, generally run at constructor time only.
+   # The cbmap program ignores methods matching:
+   # ^_, ^do, ^cb, ^callback, ^new
+
+   $self->{'cbmap'} = {} unless ( ref( $self->{'cbmap'} ) eq 'HASH' );
+   $self->{'cbmap'}->{'button'}   = sub { shift; return $self->button(@_); };
+   $self->{'cbmap'}->{'entry'}    = sub { shift; return $self->entry(@_); };
+   $self->{'cbmap'}->{'password'} = sub { shift; return $self->password(@_); };
+
+   return ( $self->{'cbmap'} );
+}
+
+### ACCESSOR
+
+sub button   { my $self = shift; return ( Pdt::Form::Button->newwidget(@_) ); }
+sub entry    { my $self = shift; return ( Pdt::Form::Entry->newwidget(@_) ); }
+sub password { my $self = shift; return ( Pdt::Form::Password->newwidget(@_) ); }
+
+1;
+

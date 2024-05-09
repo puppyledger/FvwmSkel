@@ -1,0 +1,10 @@
+
+echo "__________ PLAYERS __________"
+aplay -L 
+
+echo "__________ LISTENERS __________"
+arecord -L 
+
+echo "__________ MEMORY ADDRESSES __________"
+dmesg | grep snd
+

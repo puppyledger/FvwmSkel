@@ -1,0 +1,12 @@
+
+INVENTORY.txt: This file
+acl
+alsa
+bin
+fvwm
+lib
+local
+macro
+minicom
+start
+vim

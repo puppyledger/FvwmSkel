@@ -1,0 +1,63 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-38-22.EDT';
+
+#: list the methods in a class
+
+use Getopt::Std;    # CLI options
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Sort::Naturally qw(nsort);
+
+use strict;
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+system("clear");
+
+my $class      = shift @ARGV;
+my $localclass = $class;
+my $localpath  = $ENV{'PDT_LIB_PATH'};
+chomp $localclass;
+chomp $localpath;
+$localclass =~ s/\:\:/\//g;
+my $filename    = $localpath . '/' . $localclass . '.pm';
+my $commentflag = 1;
+
+open( FN, $filename );
+my $line = readline(FN) || die( "$filename", '... file not found?' );
+close(FN);
+
+open( FN, "$filename" ) || die("unable to open $filename");
+
+print "\n";
+
+while (<FN>) {
+   if ( $_ =~ /^sub/ ) {
+      chomp;
+      my $comment = $_;
+      my $method  = $_;
+      $comment =~ s/^.*\#/\t\#/;
+      $comment = "" unless $comment =~ /\#/;
+      $method =~ s/sub\s+(\w+)\s*\{.*/$1/;
+
+      if ( defined $commentflag ) {
+         format prettyprint = 
+@<<<<<<<<<<<<<<<<< @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< @<
+$method, $comment, "\n"
+.
+
+         local $~ = "prettyprint";
+         write;
+      } else {
+         print $method ;
+         print "\n";
+      }
+   }
+}
+
+print "\n";
+
+close(FN);
+
+while (<STDIN>) { exit; }
+

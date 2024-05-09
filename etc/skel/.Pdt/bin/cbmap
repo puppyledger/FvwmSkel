@@ -1,0 +1,119 @@
+#! /usr/bin/perl
+
+#: Reads the class currently being edited and pulls all the method lines. 
+#: Then uses those method lines to generate and insert a callback table. 
+#: Note: cbmap is polymorphic. It extends an API to template classes: 
+#: including the definable methods: acceptname() (returns 1 or 0 on 
+#: whether this method fits the custom for this set of callbacks) and 
+#: cbline() (which generates the individual callbacks in the callback 
+#: table.) The header/footer of the callback table is defined in the 
+#: plain text template.  
+
+use Pdt::Opthead ; 
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all) ; 
+use Bash::Sugar; 
+# use Pdt::Cbmap; # now loaded by eval
+
+use strict;
+
+### input options (-f <filename> || -c <classname> || <none, LASTEDITFILE defined in .vimrc>)
+
+my $_DEBUG = 0 ; 
+my $OH = Pdt::Opthead->new() ; 
+my ($efn,$ecl,$tfn) = $OH->opthead1($_DEBUG) ; # edit file, edit class, temp edit file 
+
+my $BSUGAR = Bash::Sugar->new(); 
+$BSUGAR->sourceenv("$ENV{'HOME'}/.pdtrc");
+
+### generate the template class from the executable name (symlink polymorphism)
+
+my $execname = $0;
+$execname =~ s/^.*\///g;
+my $templatename = 'Pdt::' . $BSUGAR->capstr($execname) ; 
+my $templatestr = "use $templatename \;" ; 
+eval($templatestr) ; 
+
+if ($@) { warn $@ ; sleep 3 ; die ; }
+
+if ($_DEBUG) { warn "exename: $execname" ; sleep 1 ; }
+if ($_DEBUG) { warn "efn: $efn" ; sleep 1 ; }
+if ($_DEBUG) { warn "ecl: $ecl" ; sleep 1 ; }
+if ($_DEBUG) { warn "template: $templatestr" ; sleep 1 ; }
+
+### Create the template
+
+my $F ; 
+my $templatehandlestr = '$F = $templatename->new();' ; 
+eval($templatehandlestr) ; 
+
+if ($@) { warn $@ ; sleep 3 ; die ; }
+
+if ($_DEBUG) { warn "$templatehandlestr: $F" ; sleep 1 ; }
+
+### Generate a temp file
+
+open (RTFN,">$tfn") if (length($tfn)) ; 
+
+# the name of the property we store callbacks in.
+
+my $mapname = $execname ; # The insert flag in the template is named after the executable
+
+### accumulate and avoid dupes
+
+my @mapstatement;
+my %COLLISION ;
+
+my @mlist = seemethod($efn); # Pdt::Seepack: read thefile and get all the methods.
+if ($_DEBUG) { warn ("total methods found: ", scalar(@mlist), "\n\tthey are:", @mlist) ; sleep 1 ; }
+
+my $n = 0 ; 
+
+foreach my $m (@mlist) {
+
+		### Filter method names
+
+		chomp $m ; 
+		next unless (length($m)) ; 
+		next unless ($F->acceptname($m)) ; 
+
+      my $checkvalue = $m;           # make a copy for collision checking.
+		my $mapline = $F->cbline($m, $ecl) ; # generate the actual callback 
+
+      push( @mapstatement, $mapline ) unless $COLLISION{$checkvalue};
+      $COLLISION{$checkvalue} = 1;
+
+   	$n++;
+}
+
+if ($_DEBUG) { warn "callbacks found: $n" ; sleep 1 ; }
+
+@mapstatement = nsort(@mapstatement);
+my $bar = join "\n\t", @mapstatement;
+
+$F->append(
+   'execname'     => $execname,
+   'mapname'      => $mapname,
+   'mapstatement' => $bar
+);
+
+### The template is loaded, but there may be some minor post processing required. 
+### Not all callback maps implement this method. 
+
+my $ppstr = '$F->postprocess() ;' ; 
+eval($ppstr) ; 
+if ($@ && $_DEBUG) { warn "no postprocess() method present."; sleep 1;  }
+
+# If we are inside vim we write to the vim defined tmp file
+
+if (length($tfn)) {
+	print RTFN $F->output();
+	print RTFN "\n";
+}
+
+# we write the screen as well to show what we are doing in debug mode
+
+print $F->output();  
+print "\n" ; 
+
+if ($_DEBUG) { sleep 5 ; }

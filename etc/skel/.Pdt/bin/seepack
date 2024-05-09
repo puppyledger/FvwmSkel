@@ -1,0 +1,28 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-55-34.EDT';
+
+#: get a use statement from a filename
+
+use strict;
+
+my $fn = shift @ARGV;
+chomp $fn;
+
+open( FN, $fn );
+my $line = readline(FN) || exit;
+close(FN);
+chomp $line;
+exit unless $line =~ /package/;
+
+# die('not a package?') unless $line =~ /package/;
+
+$line =~ s/^\s*package\s*//;
+$line =~ s/\#.*$//;    # remove comments
+$line =~ s/\;.*//g;    #  remove all but the package name
+$line =~ s/\s+//g;     #
+my $oldpack = $line;   # The existing package:
+
+print "use $oldpack \;";
+

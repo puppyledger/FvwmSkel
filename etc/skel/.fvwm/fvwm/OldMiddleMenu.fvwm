@@ -1,0 +1,15 @@
+# onchdir, needs to be changed to push paths to a log 
+# This menu dynamically lists the last 10 directories, and 
+# selecting one sets the current project directory. 
+
+DestroyFunc Run_MiddleMenu
+AddToFunc Run_MiddleMenu
++ I Refresh_MiddleMenu 
++ I Menu MiddleClickMenu
+
+DestroyFunc Refresh_MiddleMenu
+AddToFunc Refresh_MiddleMenu
++ I DestroyMenu MiddleClickMenu 
++ I AddToMenu MiddleClickMenu 
++ I PipeRead '/Projects/ScreenCast/Utilities/setvector -m -l 10 -v VECTORPATH -t /home/x1/.fvwm/local/.vectortable.txt' 
+

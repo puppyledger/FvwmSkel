@@ -1,0 +1,97 @@
+
+# START WRAPPERS
+PipeRead '$[XTOOLPATH]/fvwm-execmenu -m Minicom -p $[XSTARTPATH]:$[XUSERSTARTPATH]'
+PipeRead '$[XTOOLPATH]/fvwm-selectmenu -c $[XWALLPAPERCMD] -m 1600x900-Menu -p $[XWALLPAPERPATH]:$[XUSERWALLPAPERPATH]'
+
+# PipeRead '$[XTOOLPATH]/skel-ifmenu -m LAN-Menu'
+
+
+# MENU CLICK ANCHOR
+DestroyFunc Run_MiddleMenu
+AddToFunc Run_MiddleMenu
++ I Refresh_MiddleMenu 
++ I Menu MiddleClickMenu
+
+# INTERFACE SCRIPTS
+
+
+# WINDOW MANAGER MENU
+DestroyMenu WMMenu
+AddToMenu WMMenu
++ 'WindowList' WindowList
++ 'X Properties' Exec xterm -e "xprop | less"
++ 'E&vents' Exec xterm -e xev
++ 'View Env Variable' Exec fvwm-viewenv
++ 'Set Env Variable' Exec fvwm-xsetenv
++ "Boundaries" Popup FvwmScroll
++ 'Restart' Restart
+
+# USB Stick and memory card 
+DestroyMenu MountMenu  
+AddToMenu MountMenu 
++ 'Flash&1 Mount' Exec xterm -e sudo mount /dev/sdb1 
++ 'Flash1 &UnMount' Exec xterm -e sudo umount /dev/sdb1 
++ 'Flash&2 Mount' Exec xterm -e sudo mount /dev/sdc1 
++ 'Flash2 U&nMount' Exec xterm -e sudo umount /dev/sdc1 
+
+# Post boot user environment localization scripts  
+# for multiuser environments 
+
+DestroyMenu LocalizeMenu
+AddToMenu LocalizeMenu
++ 'Flash&1 Mount' Exec xterm -e sudo mount /dev/sdb1
++ 'Flash1 &UnMount' Exec xterm -e sudo umount /dev/sdb1
++ 'Flash&2 Mount' Exec xterm -e sudo mount /dev/sdc1
++ 'Flash2 U&nMount' Exec xterm -e sudo umount /dev/sdc1
+
+
+	# WINDOW MANAGER DESKTOP SCROLLING
+	DestroyMenu FvwmScroll
+	AddToMenu FvwmScroll  
+	+ "ON"	EdgeScroll 0 0
+	+ "OFF"	EdgeScroll 100 100
+	+ "Verticle Only"	EdgeScroll 100 0
+	+ "Horizontal Only"	EdgeScroll 0 100
+	+ "Partial"	EdgeScroll 50 50
+
+# QUIT SUBMENU 
+DestroyMenu ReallyQuit 
+AddToMenu ReallyQuit
++ "YesClose" DoQuit 
+
+# QUIT FUNCTION
+DestroyFunc DoQuit 
+AddToFunc DoQuit
++ I Exec aplay $[SOUND_LOGOUT] 
++ I Quit 
+
+# Probably the best way to handle default geometries, is to run from Localvars a 
+# utility that creates .Xdefaults. 
+
+# MAIN MENU 
+DestroyFunc Refresh_MiddleMenu
+AddToFunc Refresh_MiddleMenu
++ I DestroyMenu MiddleClickMenu
++ I AddToMenu MiddleClickMenu
++ I + "Ur&xvt" Exec $[XSTARTPATH]/NoMenu.Urxvt.sh
++ I + "SSH" Exec $[XSTARTPATH/NoMenu.StartSSH.sh
++ I + "Mi&nicom" Popup Minicom
++ I + "" Nop
++ I + "Interface" Popup LAN-Menu
+PipeRead $[XTOOLPATH]/fvwm-ethtopmenu
+
++ I + "" Nop
++ I + "Screen&Lock" Exec xlock -mode blank &
++ I + 'Background' Popup 1600x900-Menu
++ I + "Localize" Popup LocalizeMenu
++ I + "Mount" Popup MountMenu
++ I + "FVWM" Popup WMMenu
++ I + "" Nop
++ I + 'Close Desktop' Popup ReallyQuit 
+
+######################################################################
+# OLD STUFF
+
+# + I + "Win32NAS" Exec xterm -T Win32NAS -e sudo win32nas
+# + I + "Co&nsole" Exec rxvt -sl 500 -bg black -fg green -title "CONSOLE" -n "CONSOLE" -sr -e minicom -C ~/.minicom.session ~/.minicom.cfg 
+

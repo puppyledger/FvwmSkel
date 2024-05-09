@@ -1,0 +1,16 @@
+#! /bin/perl
+
+my $VERSION = '2018-04-10.04-43-06.EDT';
+
+# strip crlf from dos files. (AAAARGH!)
+
+while (<STDIN>) {
+   print crlf($_) . "\n";
+}
+
+sub crlf {
+   my $line = shift;
+   $line =~ s/[\015\012]//g;    # strip CRLF
+   return $line;
+}
+

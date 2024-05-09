@@ -1,0 +1,59 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-40-40.EDT';
+
+# Program generates a callback map function
+# from a perl module file named in the ENV
+# varalb LASTEDITFILE (which is defined by
+# vimod, so if we use vimod, this works.
+
+use Vim::Cbhelp;
+use Sort::Naturally qw(nsort);
+
+# get the target class on the CLI
+
+local $SIG{__WARN__} = sub { };
+
+my $execname = $0;
+$execname =~ s/^.*\///g;
+
+my $exportmode;
+my $editclass = shift(@ARGV);
+chomp $editclass;
+
+# the template
+my $doc = Vim::Cbhelp->new();
+
+# get it from the environment if none is on the CLI (allows inline usage in vi)
+$editclass = $ENV{'LASTEDITCLASS'} unless length($editclass);
+
+$mapname = 'cbhelp';
+
+my @mapstatement;
+
+open( MLIST, "methmod $editclass |" );
+
+while (<MLIST>) {
+   next unless $_ =~ /^dohelp/;    # ignore constructors
+   chomp;
+
+   my $foo = '$self->{\'' . $mapname . '\'}->{\'' . $_ . '\'} = sub { shift ; return $self->' . $_ . '(@_) ; }' . ';';
+
+   push( @mapstatement, $foo );
+}
+
+close(MLIST);
+
+@mapstatement = nsort(@mapstatement);
+my $bar = join "\n\t", @mapstatement;
+
+$doc->append(
+   'execname'     => $execname,
+   'mapname'      => $mapname,
+   'mapstatement' => $bar
+);
+
+print $doc->output();
+print "\n";
+

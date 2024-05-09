@@ -1,0 +1,23 @@
+### Decoration related functions
+
+# Small square, left click 
+DestroyFunc DeleteOrDestroyWindow
+AddToFunc   DeleteOrDestroyWindow
++ H Nop
++ M Nop
++ C Delete
++ D Destroy
+
+# Horizonal bar, left click
+DestroyFunc IconifyOrShadeWindow   
+AddToFunc   IconifyOrShadeWindow
++ H Nop
++ M Nop
++ C WindowShade
++ D Iconify
+
+# Horizontal Bar, right click
+DestroyFunc MaximizeWindow
+AddToFunc   MaximizeWindow
++ C Maximize $0 $1
++ D Maximize $0 $1

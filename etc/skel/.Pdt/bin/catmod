@@ -1,0 +1,14 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-38-53.EDT';
+
+use Pdt::SourceEnv qw(:all);
+use strict;
+
+&sourceenv( $ENV{'PDT_PDTRC'} );
+
+my $class = shift @ARGV;
+chomp $class;
+my $packlib = class2fn($class);
+exec("cat $packlib");
+

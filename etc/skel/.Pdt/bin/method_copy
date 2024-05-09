@@ -1,0 +1,77 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-46-57.EDT';
+
+# model an existing method onto other methods
+
+use Sort::Naturally qw(nsort);
+use Pdt::SeePack qw(:all);
+use Pdt::SourceEnv qw(:all);
+use Pdt::Cbmap;
+use Pdt::Bonk qw(:all);
+use Data::Dumper qw(Dumper);
+use Getopt::Std;    # CLI options
+
+use strict;
+
+setbonk;
+
+my $tclass = $ENV{'PDT_EDIT_CLASS'};    # the template we are editing
+
+unless ( length($tclass) ) {
+   $tclass = shift @ARGV;
+   chomp $tclass;
+   Bonk "no class found";
+   exit;
+}
+
+unless ( length( $ENV{'RTFN'} ) ) {     #
+   Bonk "no RTFN environment variable defined";
+   exit;
+}
+
+my $fn = class2fn($tclass);
+die("unable to determine filename for: $tclass") unless length($fn);
+
+my @TM = @ARGV;                         # target methods
+chomp( $TM[ $#TM ] ) if scalar(@TM);
+my $method = shift(@TM);                # first argument is the copy from method
+
+open( FN, "$fn" ) || die("unable to open $fn");
+
+my $inmethod  = 0;
+my $isbracket = 0;
+
+my $copytext;
+
+while (<FN>) {
+   if ( $_ =~ /^sub\s+$method\s*\{/ ) {
+      $inmethod  = 1;
+      $isbracket = 1;
+
+   }
+   if ( $_ =~ /^\}/ && $inmethod ) {
+      $isbracket = 1;
+   }
+
+   if ( $inmethod && $isbracket ) { $copytext .= $_; }
+   elsif ($inmethod) { $copytext .= $_; }
+
+   if ( $_ =~ /^\}/ && $inmethod ) {
+      $inmethod = 0;
+   }
+
+   $isbracket = 0;
+}
+
+close(FN);
+open( RTFN, ">$ENV{'RTFN'}" );
+
+foreach my $mname (@TM) {
+   my $newtext = $copytext;
+   $newtext =~ s/$method/$mname/g;
+   print RTFN $newtext, "\n";
+}
+
+close(RTFN);
+

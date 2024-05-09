@@ -1,0 +1,61 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-55-22.EDT';
+
+# my $defaultlibpaths = $ENV{'PERL_PATHMODULES'} ;
+# eval($defaultlibpaths)  ;
+# die $@ if $@ ;
+
+use Cwd; 
+use Getopt::Std;                  # CLI options
+use Sort::Naturally qw(nsort);    #
+# use Pdt::Template something. The final report template. 
+
+# disable non-fatal errors.
+local $SIG{__WARN__} = sub { };
+
+my %OPTS;
+getopts( '?d:f:h:', \%OPTS);
+
+# system('clear');
+&dohelp if defined $OPTS{'?'};
+
+my $startdir = cwd() ; 
+
+### directory is now fully 
+
+# make sure we have a correctly defined and formed working directory and that we are in it. 
+
+my $d ; $d = $OPTS{'d'} if length($OPTS{'d'}) ; 
+if (length($d)) { chdir($d) || die ("no such dir $d"); } 
+$d = cwd() unless defined $d ; 
+$d =~ s/\/*$/\// ; 
+
+# make sure we have a fq and correctly formed filename. 
+
+my $f ; &dohelp unless defined $OPTS{'f'} ; $f = $OPTS{'f'} ;
+$f =~ s/^.*\/// ; $f =~ s/^/$d/ ; 
+
+# make sure we have a defined number of hours
+
+my $h ; $h = $OPTS{'h'} ; $h = 24 unless defined $OPTS{'h'}; 
+
+warn "foo";
+
+sub dohelp { # 
+   while (<DATA>) { print $_ ; }
+   exit;
+}
+
+
+__DATA__
+
+diffreport: 
+
+runtemplate -d <dir> -f <file> -h <hours>
+
+-d directory to look in 
+-f filename to report on 
+-h how far back to report on it 
+-? this help file
+

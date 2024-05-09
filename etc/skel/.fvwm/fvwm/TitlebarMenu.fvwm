@@ -1,0 +1,52 @@
+
+# This menu is clickable on the title bar of any window. We 
+# include urxvt in the event we brake other menus by accident.  
+# otherwise this menu is mostly about capturing content. 
+
+# Screenrecord is going to be  
+
+# the key sequences for zoomin zoomout is believed to be: 
+# ctl-alt-keypad-plus and minus. If these can be keysymmed 
+# through x-11 we can add that feature to the titlebar menu 
+# Fri Jan 19 03:35:36 EST 2018
+
+DestroyFunc Refresh_TitlebarMenu
+AddToFunc Refresh_TitlebarMenu
++ I DestroyMenu IconClickMenu 
++ I AddToMenu IconClickMenu
++ I + "Urxvt" Exec $[XSTARTPATH]/NoMenu.Urxvt.sh
++ I + ""        Nop
++ I + "&Filename Prefix" Exec $[VTP_BIN_PATH]/setvtprc.pl -e -p
++ I + "&Grab Resolution" Run_ScreenTargetMenu 
++ I + ""        Nop
++ I + "Screen &Shot" Exec $[VTP_BIN_PATH]/vtpsnap.pl &
++ I + "&View Shot" Exec $[VTP_BIN_PATH]/vtpplay.pl -i &
++ I + ""        Nop
++ I + "Audio &Note" Exec $[VTP_BIN_PATH]/vtpaudio.pl &
++ I + "Audio &End Note" Exec $[VTP_BIN_PATH]/vtpstopaudio.pl &
++ I + "Audio &Play Note" Exec $[VTP_BIN_PATH]/vtpplay.pl -a &
++ I + ""        Nop
++ I + "X Window&ID" Exec xmessage -buttons foo,bar $[w.id] 
+
+DestroyFunc Run_TitlebarMenu
+AddToFunc Run_TitlebarMenu
++ I Refresh_TitlebarMenu 
++ I Menu IconClickMenu
+
+# WINDOW MANAGER MENU
+
+DestroyFunc Run_ScreenTargetMenu
+AddToFunc Run_ScreenTargetMenu
++ I Refresh_ScreenTargetMenu 
++ I Menu ScreenTargetMenu
+
+DestroyFunc Refresh_ScreenTargetMenu
+AddToFunc Refresh_ScreenTargetMenu
++ I DestroyMenu ScreenTargetMenu
++ I AddToMenu ScreenTargetMenu
++ I + "This &Window" Exec $[VTP_BIN_PATH]/setvtprc.pl -w $[w.id]
++ I + "VGA" Exec $[VTP_BIN_PATH]/setvtprc.pl -r VGA 
++ I + "480P" Exec $[VTP_BIN_PATH]/setvtprc.pl -r 480P
++ I + "720P" Exec $[VTP_BIN_PATH]/setvtprc.pl -r 720P
++ I + "Desktop" Exec $[VTP_BIN_PATH]/setvtprc.pl -d
+

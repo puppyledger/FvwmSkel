@@ -1,0 +1,9 @@
+#! /bin/bash 
+
+# set an FVMW environment variable from a dialog
+
+export VAR1=`fvwm-entry -m Variable: -d DEFAULT`
+export VAR2=`fvwm-entry -m Value: -d ""`
+
+FvwmCommand "SetEnv $VAR1 $VAR2"
+

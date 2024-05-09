@@ -1,0 +1,4 @@
+#! /usr/bin/bash
+
+/usr/bin/xmessage foo
+

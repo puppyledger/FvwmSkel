@@ -1,0 +1,11 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-50-57.EDT';
+
+use Pdt::SourceEnv qw(:all);
+
+use strict;
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+print "$ENV{'PDT_ACTIVE'}\n";

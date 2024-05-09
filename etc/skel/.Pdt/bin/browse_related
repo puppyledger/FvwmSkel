@@ -1,0 +1,44 @@
+#! /usr/bin/perl
+
+my $VERSION = '2018-04-10.04-38-37.EDT';
+
+#:
+#: usage: B: related
+#:
+#: list packages in the same directory as ourselves.
+#:
+
+use Sort::Naturally qw(nsort);
+use strict;
+
+system('clear');
+
+my $prefix = $ENV{'PDT_EDIT_CLASS'};
+chomp $prefix;
+my @ptok = split( /\:\:/, $prefix );
+
+my $prefixdepth = scalar(@ptok);
+
+pop @ptok;
+$prefix = join '::', @ptok;
+
+open( LSLIB, "lspack $prefix |" ) || die $@;
+
+my $text;
+
+while (<LSLIB>) {
+   my $line = $_;
+
+   chomp $line;
+   $line =~ s/^use\s+//;
+   $line =~ s/\s*\;\s*$//;
+   my @foo = split( /\:\:/, $line );
+   next if ( scalar(@foo) > $prefixdepth );
+
+   $text .= $_;
+}
+close(LSLIB);
+
+print $text ;
+
+while (<STDIN>) { exit; }

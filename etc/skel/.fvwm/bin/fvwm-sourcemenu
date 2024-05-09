@@ -1,0 +1,151 @@
+#! /Skel/bin/perl
+#
+# Menu generator from text file simple list, or from STDOUT from a program. 
+# 
+# What is going on in fvwm
+
+# PipeRead '$[XTOOLPATH]/fvwm-sourcemenu -c $[XTRYFONTCMD] -m TryFont -p $[XMACROPATH]/Urxvt.TryFont.txt:$[XUSERFONTPATH]/Urxvt.UserFont.txt'
+# PipeRead '$[XTOOLPATH]/fvwm-sourcemenu -c $[XSETFONTCMD] -m SetFont -p $[XMACROPATH]/Urxvt.SetFont.txt:$[XUSERFONTPATH]/Urxvt.UserFont.txt'
+#
+# fvwm-sourcement is supplied a command, a menuname, and a file list. The filelist is either a text file or a script 
+# printing a plain text list to STOUT. 
+# 
+# fvwm-sourcement respects file extensions .pl .py and .sh to determine executability. 
+# The generated menu costs of the command executed against whatever the value is provided 
+# by the  text file. 
+# 
+
+use Cwd ;
+use Getopt::Std ;
+use Sort::Naturally qw(nsort) ; 
+
+use strict ;
+
+my %OPTS ; 
+getopts('c:p:m:h', \%OPTS) ; # prefix, id 
+
+&dohelp if exists $OPTS{'h'} ; 
+
+my $nooptcmd = $OPTS{'c'} ; 
+$nooptcmd =~ s/\s+.*//g ; # get rid of all options
+
+die ("$nooptcmd is not an executable.") unless -x $nooptcmd ; 
+
+my $menuname   ; 
+my $scriptpath ;
+my $localpath  ; 
+my $P = [] ;  # paths 
+
+die ('no paths provided') unless (length($OPTS{'p'})) ;
+
+@$P = split /\:/, $OPTS{'p'} ; 
+
+# warn "PATHS: ", @$P ; # the block of paths passed by the user
+# warn $P->[0] ; 
+# warn "foo" if (-d $P->[0]) ; 
+
+# warn ("FOO ", $OPTS{'c'}); 
+
+# search the files and determine if they are scripts or just flat files. 
+#
+my $isexec = {} ; 
+
+for (my $n = 0; $n < scalar(@$P) ; $n++) {
+
+	# do a little sanity for stupid mistakes
+
+	chomp $P->[$n] ; 
+
+	unless (-e $P->[$n]) {
+		# warn "not a directory: ", $P->[$n] ; 
+		splice(@$P,$n,1) ; 
+		$n-- ; 
+	} 
+
+	if ( $P->[$n] =~ /[\.sh|\.pl|\.py]$/i ) {
+		$isexec->{$P->[$n]} = 1 ; 
+	} else {
+		$isexec->{$P->[$n]} = 0 ; 
+	}
+
+}
+
+# read from flat files or executables and prune duplicates. 
+
+my $M = {} ;  # the menu has a hash
+
+foreach my $p (@$P) {
+	unless ($isexec->{$p}) {
+		open (LIST,$p) || warn ("$p unreadable") ; 
+
+		while (<LIST>) {
+			chomp $_ ; 
+			$_ =~ s/^\s+//  ; 
+			$_ =~ s/\#.*$// ; 
+			next unless length($_)  ; 
+			$M->{$_} = $_ ; 
+		}
+		close(LIST) ; 
+
+	} else {
+		open(PROG, "$P |") || warn ("$p unrunable") ; 
+
+		while (<PROG>) {
+			chomp $_ ; 
+			$_ =~ s/^\s+//  ; 
+			$_ =~ s/\#.*$// ; 
+			next unless length($_)  ; 
+			$M->{$_} = $_ ; 
+		}
+		close(PROG) ; 
+	}
+}
+
+my @menuhead  ; 
+my @menuline  ; 
+
+ @menuhead = domenuhead() ; 
+
+foreach my $k (nsort(keys %$M)) { 
+	push @menuline, domenuline($k, $M->{$k}) ; 
+}
+
+### PRINT IT 
+
+print @menuhead ; 
+print @menuline ; 
+print "\n\n" ; 
+
+### done. 
+
+sub domenuhead { # 
+	my $text = "\n\nDestroyMenu $OPTS{'m'}" . "\n" . "AddToMenu $OPTS{'m'}" ;
+	return $text ; 
+}
+
+sub domenuline { # make a simple callback line 
+	my $desc = shift ;
+	my $fn = shift ; 
+	my $text = "\n\+ \'" . $desc . "\' Exec $OPTS{'c'} $fn \&" ;  
+  	return $text ; 
+}
+
+sub dohelp { #
+	open ("__DATA__") ; 
+	while (<DATA>) {
+		print $_ ;
+	}
+	close(DATA) ; 
+	exit ; 	
+}
+
+__DATA__
+
+fvwm-sourcemenu
+
+Create a block of command menus from flat lists. lists may be provided by 
+flat files, or scripts. vwm-source respects file extensions .sh .pl and .py 
+and will execute and read from STDOUT. Otherwise its a straight read. 
+
+usage: fvwm-selectmenu -c <command> -m <MenuName> -d <foo.txt:bar.sh:etc> 
+

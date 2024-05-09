@@ -1,0 +1,11 @@
+This is incomplete for skel and fvwm. 
+
+What needs to happen, is that there needs to be a user:group added "minicom:dialout". 
+
+dialout is already there. 
+
+Next a udev script needs to be added: See superuser.com/questions/431843
+
+
+
+

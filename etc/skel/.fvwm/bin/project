@@ -1,0 +1,43 @@
+#! /usr/bin/perl
+
+use Getopt::Std;
+use Pdt::SourceEnv qw(:all);
+use Pdt::Help::Project;
+
+use strict;
+
+sourceenv("$ENV{'HOME'}/.pdtrc");
+
+my %OPTS;
+getopts( 'n:luh', \%OPTS );
+
+if ( defined $OPTS{'u'} ) {
+   exec "setpdtrc -u";
+} elsif ( defined $OPTS{'h'} ) {
+   &dohelp;
+} elsif ( exists $OPTS{'n'} ) {
+   die("$ENV{'PDT_ROOT'}\/$OPTS{'n'} already exists.") if ( -d "$ENV{'PDT_ROOT'}/$OPTS{'n'}" && length( $OPTS{'n'} ) );
+   exec "setpdtrc -d -g -p $OPTS{'n'}" if ( length( $OPTS{'n'} ) );
+   die 'usage: project -n <projectname>';
+} elsif ( defined $OPTS{'l'} ) {
+   exec "ls $ENV{'PDT_ROOT'}";
+} elsif ( scalar(@ARGV) ) {
+   my $p = $ARGV[ 0 ];
+   chomp $p;
+   if ( -d "$ENV{'PDT_ROOT'}/$p" ) {
+      exec "setpdtrc -p $p";
+   } else {
+      print "\n-n for new projects.\n\n";
+      exec "ls $ENV{'PDT_ROOT'}";
+   }
+} else {
+   print "$ENV{'PDT_ACTIVE'}\n";
+   exit;
+}
+
+sub dohelp {
+   my $T = Pdt::Help::Project->new();
+   print $T->output();
+   exit;
+}
+

@@ -1,0 +1,42 @@
+#! /usr/bin/perl
+
+#: simple script that extracts the class and method lines from every .py file in the current directory. 
+
+use strict;
+use Cwd ; 
+
+my @curdir ;
+
+opendir( CURDIR, cwd() ) || die "wtf";
+
+print "\n" ; 
+
+while (readdir(CURDIR)) {
+   chomp $_;
+	next if ($_ =~ /^\./) ; 
+   if ( $_ =~ /\.py$/i ) {
+      push @curdir, $_;
+   }
+}
+
+foreach(@curdir) {
+	my $thispy   =$_ ; 
+	print '##################### '  .  $thispy . "######################" .  "\n\n" ; 
+	open (THISPY, "$thispy") || die ("wtf") ; 
+	while (<THISPY>) {
+		next if ($_ =~ /^\w*\#/);  
+		if ($_ =~ /^\w*class/) {
+			print $_ ; 
+			next ; 
+		} 
+		if ($_ =~ /^[\w\t]*def/) {
+			print $_ ; 
+			next ; 
+		}
+	}
+	print "\n" ; 
+
+	close(THISPY) ; 
+}
+
+

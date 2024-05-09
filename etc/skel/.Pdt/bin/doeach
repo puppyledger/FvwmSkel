@@ -1,0 +1,17 @@
+#! /bin/perl
+
+my $VERSION = '2018-04-10.04-43-21.EDT';
+
+#: Take text commands from STDIN and run them one at a time
+#: Be careful with this!
+
+my $arg = shift @ARGV;
+chomp $arg;
+
+while (<STDIN>) {
+   next unless $_ =~ /\w+/;
+   chomp;
+   print "\n";
+   system($_) unless $arg =~ /\w+/;
+}
+

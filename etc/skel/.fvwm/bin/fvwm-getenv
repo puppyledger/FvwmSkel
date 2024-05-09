@@ -1,0 +1,46 @@
+#! /Skel/bin/perl
+#
+use Fcntl ; # nonblocking 
+use Time::HiRes qw (time alarm sleep); # fractional sleep
+
+use strict ; 
+
+my $ev = shift @ARGV ; 
+chomp $ev ; 
+die ("usage: fvwm-getenv <environmentvariable> ") unless $ev =~ /\w+/ ; 
+
+# MAKE FIFO
+my $mkfifo = $ENV{'PERL_MKFIFO'} . ' -m 700' ; # the mkfifo command 
+my $tmppath = $ENV{'PERL_TMP'}               ; # a tmp directory of your choice 
+my $rn = sprintf("%0.10d",rand(1000000000))  ; # random number
+my $fifofn = $tmppath . '/' . $rn . '.fifo'  ; # becomes a filename
+system("$mkfifo $fifofn") ; # and we create a temporary fifo
+
+# MAKE PASSTHROUGH COMMAND 
+my $fvwmcommand = 'FvwmCommand ' . "\'" . "Test \(EnvIsSet $ev\) Exec echo \$[$ev] >> $fifofn" . "\'" ; 
+
+my $childpid  ; # know thyself
+my $readbuf ; # nonblock buffer
+my $line    ; # the text line 
+
+if ($childpid = fork) { # Parent
+	sysopen(FIFOFN, "$fifofn", O_NONBLOCK|O_RDWR) ; # open fifo for reading
+	for (my $n = 0;$n < 10; $n++) { # 10 loops 1/10th of a second each 
+		sleep '0.1'  ; 
+		my $didread = sysread(FIFOFN, $readbuf, 2048) ; #
+		$line .= $readbuf ; 
+		if (defined $didread && $line =~ /\n/) { # 
+			print $line    ; 
+			close(FIFOFN)  ; 
+			unlink $fifofn ; # delete the tmp file
+			exit ;
+		}
+	}
+} else { # Child
+	system($fvwmcommand) ; 
+	exit ; 
+}
+
+close(FIFOFN) ; 
+die("no variable found.") ; 
+

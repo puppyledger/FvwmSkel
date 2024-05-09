@@ -1,0 +1,6 @@
+#! /bin/bash 
+
+xterm -iconic -e " echo foo; sleep 1; FvwmCommand \"WindowId $WINDOWID FakeKeyPress press h release h\" ; echo bar ; sleep 1"
+
+xterm -iconic -e "echo foo; sleep 1; FvwmCommand \"Piperead 'echo $WINDOWID | grep 0 > $HOME/thiswindow.txt'\" ; echo bar ; sleep 1"
+

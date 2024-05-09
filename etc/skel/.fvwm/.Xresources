@@ -1,0 +1,13 @@
+URxvt.perl-ext-common:-confirm-paste 
+
+XTerm.vt100.locale: false
+XTerm.vt100.utf8: true
+XTerm.vt100.metaSendsEscape: true
+XTerm.vt100.backarrowKey: false
+XTerm.vt100.ttyModes: erase ^?
+
+XTerm.vt102.locale: false
+XTerm.vt102.utf8: true
+XTerm.vt102.metaSendsEscape: true
+XTerm.vt102.backarrowKey: false
+XTerm.vt102.ttyModes: erase ^?

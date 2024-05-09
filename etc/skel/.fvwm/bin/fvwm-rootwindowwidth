@@ -1,0 +1,2 @@
+#! /bin/bash
+xwininfo -root | grep '\-geometry' | pexp 's/.*\s(\d+)x.*/$1/'

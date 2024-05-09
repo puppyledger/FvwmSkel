@@ -1,0 +1,7 @@
+#! /bin/bash
+
+# \#
+export VERSION='2018-04-10.04-42-21.EDT'
+
+source $HOME/.pdtrc
+echo "cd $PDT_LIB_PATH"

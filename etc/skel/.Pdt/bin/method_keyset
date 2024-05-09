@@ -1,0 +1,210 @@
+#! /usr/bin/perl
+
+# \#
+my $VERSION = '2018-04-10.04-48-34.EDT';
+
+use Term::ReadKey;
+use Time::HiRes qw(sleep);    # decimalized sleep
+use Sort::Naturally qw(nsort);
+use Pdt::Method_KeySet;
+use Pdt::SourceEnv qw(:all);    # environment handling tools
+use Pdt::Ascii;                 # The base ascii table
+use Getopt::Std;
+
+use strict;
+
+my %OPTS = ();
+getopts( 'hlad', \%OPTS );
+
+####
+
+&dohelp if ( exists $OPTS{'h'} );
+
+#### setup the initial ascii table
+
+my $A          = Pdt::Ascii->new();
+my $asciitable = $A->output();
+$A->doinit($asciitable);
+
+if ( exists $OPTS{'l'} ) {    # list mode
+
+   print $A->output();
+   exit;
+
+} elsif ( exists $OPTS{'d'} ) {    # definition mode
+
+   print "\nGenerating Definition Map to Append to Pdt::Ascii\n";
+
+   my %selkn = keyinputloop("\nkey and name? ");
+
+   print "\n\n";
+
+   foreach my $k ( nsort( keys(%selkn) ) ) {
+      print "$k $selkn{$k}\n";
+   }
+
+} else {                           # callback mode
+   my $funcname = shift @ARGV;
+   chomp $funcname;
+   $funcname = 'KEYSET' unless length($funcname);
+
+   # get a random tempfile name, from the ide or from
+   # the CLI.
+
+   my $rtfn;
+
+   unless ( length( $ENV{'RTFN'} ) ) {
+      $rtfn = `rtfn`;
+   } else {
+      $rtfn = $ENV{'RTFN'};
+   }
+
+   die('unable to open rtfn') unless length($rtfn);
+
+   open( RTFN, ">$rtfn" ) || die("unable to open $rtfn");
+
+   my %selkn = keyinputloop("\nkey and callback name? ");
+
+   # sometimes the argument is an existing data structure.
+   # it will typically be preceded with a $
+
+   my $n = 0;
+
+   my @L;
+
+   foreach my $k ( nsort( keys(%selkn) ) ) {
+
+      my $keydescriptor = $A->bynum($k);
+
+      # map the callback
+
+      my $line = "\t\t\'$k\' \=\> " . '$self->{\'cbmap\'}->{' . "\'$selkn{$k}" . "\'\}";
+
+      # comma all but the last line
+
+      if ( scalar( keys(%selkn) ) > ( $n + 1 ) ) {
+         $line .= ',';
+      }
+
+      # add the keydescriptor
+
+      $line .= "\t\# $keydescriptor\n";
+
+      push @L, $line;
+
+      $n++;
+   }
+
+   my $method_name;
+
+   if ( length($funcname) ) {
+      $method_name = $funcname;
+   } else {
+      print "\n\nmethod name:";
+      $method_name = <STDIN>;
+      chomp $method_name;
+   }
+
+   my $keyset_entry = join "", @L;
+
+   my $kmf = Pdt::Method_KeySet->new( 'method_name' => $method_name, 'keyset_entry' => $keyset_entry );
+   print RTFN $kmf->output();
+   close(RTFN);
+
+   unless ( length( $ENV{'RTFN'} ) ) {
+      print "\n\n";
+      exec "cat $rtfn";
+   }
+
+}
+
+#### END
+
+sub keyinputloop { # character input loop with escape
+   my $question = shift;
+   print "\nTo end type alt-esc    \[length:key:name\]\n";
+
+   my $bailout = 0;
+   my %selkn;         # selected key numbers
+
+   while ( $bailout == 0 ) {
+      print $question ;
+
+      ReadMode 4;
+
+      my $k = ReadKey(0);
+      my $kn = ord($k) if length($k);
+
+      if ( $kn == 195 || $kn == 194 ) {    # xterm alt-key emulation
+         my $k2 = ReadKey(-1);
+         if ( length($k2) ) {              #
+            $kn .= ord($k2);               # accumulate the alt character
+            $k  .= $k2;                    # accumulate the numerical index
+         }
+      } elsif ( $kn == 27 ) {    # escape or accumulate F-key
+         my $k2 = ReadKey(-1);
+         if ( ord($k2) == 91 ) {    # xterm,urxvt f-key emulation
+            my ($k3) = ReadKey(-1);
+            my ($k4) = ReadKey(-1);
+            my ($k5) = ReadKey(-1);
+            $kn .= ord($k2);
+            $kn .= ord($k3);
+            $kn .= ord($k4);
+            $k = $k . $k2 . $k3 . $k4;
+         } elsif ( length($k2) ) {    # urxvt alt-key emulation
+            $kn .= ord($k2);
+            $k  .= $k2;
+         }
+      }
+
+      # detect loop exit
+
+      $bailout = 1 if ( $kn == 194155 || $kn == 2727 );    # alt-esc, xterm, urxvt
+
+      # here we accumulate keycombo to name pairs
+
+      unless ($bailout) {
+         print length($k), ":", $kn, ":";
+         ReadMode(0);                                      # set the readmode back to zero
+         my $kname = <STDIN>;
+         chomp $kname;
+         $selkn{$kn} = $kname;
+         sleep 0.05;
+      }
+   }
+
+   ReadMode(0);                                            # set the readmode back to zero
+
+   return %selkn;
+}
+
+sub dohelp { # help.keymap
+
+   my $encoded = <<"HELP";
+Usage:
+
+	:M keyset <methodname>
+
+	This will allow you to define key sequences to callback functions. 
+	Output is like so: 
+
+	<keycodenumber> => <callbackname>, # <keycodename> 
+
+	which will be provided as a set/get method. 
+
+other non-callback oriented features: 
+
+-h this document
+
+-l list the embedded map
+
+-d create additional keymap definitions for Pdt::Ascii These 
+   will need to be cut and pasted into the package below the DATA 
+   line
+
+HELP
+
+   print $encoded ;
+   exit;
+}
+

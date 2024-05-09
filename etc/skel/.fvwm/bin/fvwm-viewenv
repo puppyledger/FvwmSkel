@@ -1,0 +1,12 @@
+#! /Skel/bin/perl 
+
+# view the current contents of an environment variable in fvwm
+
+open (BAR,"fvwm-entry -m \"FVWM Env Variable:\" -d \"DEFAULT\" |") ; 
+my $foo = <BAR> ; 
+close(BAR) ; 
+chomp $foo ; 
+# FvwmCommand 'Test (EnvIsSet FOO) Exec xmessage $[FOO]'
+my $block = 'FvwmCommand ' . "\'" . "Test \(EnvIsSet $foo\) " . "Exec fvwm-alarm -m \"\$\[$foo\]\"" . "\'" ; 
+system($block) ; 
+

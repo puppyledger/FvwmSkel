@@ -1,0 +1,44 @@
+#! /usr/bin/perl
+
+use Cwd qw(cwd); 
+use Getopt::Std ; 
+use File::PathInfo ; 
+
+use strict ; 
+
+my %OPTS;
+getopts( 'f:ir', \%OPTS );
+my $fn = $OPTS{'f'} ; 
+chomp $fn ; 
+print $fn ; 
+die("$fn not a .pm file?") unless ($fn =~ /\.pm$/); 
+
+
+my $F = File::PathInfo->new() ; 	# filepath findimicator
+$F->set($fn) ; 
+
+#my $wd = $F->abs_loc() 		; 	# working dir	 
+#my $sfn = $fn =~ s/^.*\///g ;		# short filename only 
+#my $fqfn = $wd . '/' . $sfn ; 	# fully qualified file name
+#
+#print "\n" . $wd . "\n" . $fqfn . "\n" ; 
+#
+#die ("$wd does not appear to be in a typical \"lib\" directory. Can't predict path.") unless ($wd =~ /\/lib\//) ; 
+#
+#sub help {
+#	while(<DATA>) {
+#		print $_ ; 
+#	}
+#}
+
+__DATA__
+usage: path2pack -f <filename> [null|-i|-r]
+
+	path2pack uses the file path to determine the package name of a perl library. 
+	optionally it can: 
+
+		-i insert it (in the case there isn't a package line) 
+		-r replace it (in the case there is already a package line) 
+	
+	dependencies: chpack, insertpack and rtfn
+
